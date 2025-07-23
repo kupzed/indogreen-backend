@@ -21,8 +21,8 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Mitra/Partner
     Route::apiResource('mitras', MitraController::class);
-    Route::get('mitras/customers', [MitraController::class, 'getCustomers']);
-    Route::get('mitras/vendors', [MitraController::class, 'getVendors']);
+    Route::get('/mitras/customers', [MitraController::class, 'getCustomers']);
+    Route::get('/mitras/vendors', [MitraController::class, 'getVendors']);
 
     // Activity
     Route::apiResource('activities', ActivityController::class);

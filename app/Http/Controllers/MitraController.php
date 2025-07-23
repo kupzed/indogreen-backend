@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Mitra;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class MitraController extends Controller
 {
@@ -168,12 +169,14 @@ class MitraController extends Controller
     public function getCustomers()
     {
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
+        Log::info('Fetched customers:', ['count' => $customers->count(), 'data' => $customers->toArray()]);
         return response()->json(['data' => $customers]);
     }
 
     public function getVendors()
     {
         $vendors = Mitra::where('is_vendor', true)->get(['id', 'nama']);
+        Log::info('Fetched vendors:', ['count' => $vendors->count(), 'data' => $vendors->toArray()]);
         return response()->json(['data' => $vendors]);
     }
 }

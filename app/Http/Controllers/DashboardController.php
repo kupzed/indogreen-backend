@@ -14,7 +14,7 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        $projects = Project::latest()->take(5)->get(['id', 'name', 'status', 'start_date', 'finish_date']); // Ambil kolom yang relevan saja
+        $projects = Project::with('mitra')->orderBy('created_at', 'desc')->latest()->take(5)->get();
         $activities = Activity::with('project')->latest()->take(5)->get(); // Load project juga
 
         return response()->json([
