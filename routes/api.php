@@ -26,6 +26,7 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Activity
     Route::apiResource('activities', ActivityController::class);
+    Route::get('/activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
 
     // Dashboard (misal hanya index)
     Route::get('dashboard', [DashboardController::class, 'index']);

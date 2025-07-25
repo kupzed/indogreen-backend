@@ -81,6 +81,8 @@ class ActivityController extends Controller
             'attachment' => 'nullable|file|max:10240', // 10MB
             'jenis' => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
             'mitra_id' => 'nullable|exists:partners,id', // Mitra ID bisa null untuk Internal
+            'from' => 'nullable|string', // Tambahkan validasi from
+            'to' => 'nullable|string',   // Tambahkan validasi to
         ]);
 
         // Logic pengisian customer_id/mitra_id
@@ -155,6 +157,8 @@ class ActivityController extends Controller
             'attachment' => 'nullable|file|max:10240', // 10MB
             'jenis' => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
             'mitra_id' => 'nullable|exists:partners,id', // Mitra ID bisa null untuk Internal
+            'from' => 'nullable|string', // Tambahkan validasi from
+            'to' => 'nullable|string',   // Tambahkan validasi to
         ]);
 
         // Logic pengisian customer_id/mitra_id
@@ -208,14 +212,14 @@ class ActivityController extends Controller
     // API endpoint tambahan untuk mendapatkan daftar proyek, customer, dan mitra
     public function getFormDependencies()
     {
-        $projects = Project::all(['id', 'name']); // Hanya ambil ID dan nama
+        $projects = Project::all(['id', 'name', 'mitra_id']); // Tambahkan mitra_id agar frontend bisa tahu customer dari project
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
-        $mitras = Mitra::where('is_vendor', true)->get(['id', 'nama']);
+        $vendors = Mitra::where('is_vendor', true)->get(['id', 'nama']);
 
         return response()->json([
             'projects' => $projects,
             'customers' => $customers, // Jika masih pakai customer secara terpisah dari mitra
-            'mitras' => $mitras, // Ini akan mencakup vendor dan internal jika ada
+            'vendors' => $vendors, // Ini akan mencakup vendor dan internal jika ada
             'kategori_list' => [ // Untuk dropdown kategori di frontend
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'

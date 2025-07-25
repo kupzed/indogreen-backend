@@ -20,6 +20,8 @@ class Activity extends Model
         'jenis',
         // 'customer_id', // Hapus ini jika tidak lagi digunakan
         'mitra_id',
+        'from', // Tambahkan ini
+        'to',   // Tambahkan ini
     ];
 
     protected $casts = [
