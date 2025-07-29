@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             MitraSeeder::class,
             ProjectSeeder::class,
             ActivitySeeder::class,
+            ActivityLogSeeder::class,
         ]);
     }
 }

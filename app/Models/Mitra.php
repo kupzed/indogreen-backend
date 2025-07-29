@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Mitra extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $fillable = [
         'nama',
@@ -27,4 +29,17 @@ class Mitra extends Model
     ];
 
     protected $table = 'partners';
+
+    public function projects()
+    {
+        return $this->hasMany(Project::class, 'mitra_id');
+    }
+
+    /**
+     * Get activity name for logging
+     */
+    public function getActivityNameAttribute()
+    {
+        return $this->nama ?? 'Mitra #' . $this->id;
+    }
 } 

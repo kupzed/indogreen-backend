@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
   
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Request;
   
   
 class AuthController extends Controller
@@ -49,6 +51,9 @@ class AuthController extends Controller
         if (! $token = Auth::attempt($credentials)) {
             return response()->json(['error' => 'Email atau password salah'], 401);
         }
+
+        // Log login activity
+        $this->logActivity('login', 'User logged in successfully');
   
         return $this->respondWithToken($token);
     }
@@ -70,6 +75,9 @@ class AuthController extends Controller
      */
     public function logout()
     {
+        // Log logout activity
+        $this->logActivity('logout', 'User logged out');
+        
         Auth::logout();
   
         return response()->json(['message' => 'Successfully logged out']);
@@ -92,6 +100,23 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
+    /**
+     * Log activity manually
+     */
+    protected function logActivity($action, $description = null)
+    {
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => $action,
+            'model_type' => User::class,
+            'model_id' => Auth::id(),
+            'model_name' => Auth::user() ? Auth::user()->name : 'Unknown User',
+            'description' => $description,
+            'ip_address' => Request::ip(),
+            'user_agent' => Request::userAgent(),
+        ]);
+    }
+
     protected function respondWithToken($token)
     {
         return response()->json([

@@ -6,6 +6,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\MitraController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ActivityLogController;
  
 Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -30,4 +31,11 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Dashboard (misal hanya index)
     Route::get('dashboard', [DashboardController::class, 'index']);
+
+    // Activity Logs
+    Route::get('activity-logs', [ActivityLogController::class, 'index']);
+    Route::get('activity-logs/recent', [ActivityLogController::class, 'getRecent']);
+    Route::get('activity-logs/stats', [ActivityLogController::class, 'getStats']);
+    Route::get('activity-logs/filter-options', [ActivityLogController::class, 'getFilterOptions']);
+    Route::get('activity-logs/{modelType}/{modelId}', [ActivityLogController::class, 'getModelLogs']);
 });
