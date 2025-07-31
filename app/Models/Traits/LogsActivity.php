@@ -2,7 +2,7 @@
 
 namespace App\Models\Traits;
 
-use App\Models\ActivityLog;
+use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 
@@ -30,18 +30,16 @@ trait LogsActivity
     {
         $description = $this->getActivityDescription($action);
         
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => $action,
-            'model_type' => get_class($this),
-            'model_id' => $this->id,
-            'model_name' => $this->getActivityName(),
-            'old_values' => $action === 'updated' ? $this->getOriginal() : null,
-            'new_values' => $action !== 'deleted' ? $this->getAttributes() : null,
-            'description' => $description,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-        ]);
+        $service = new ActivityLogService();
+        $service->log(
+            $action,
+            get_class($this),
+            $this->id,
+            $this->getActivityName(),
+            $description,
+            $action === 'updated' ? $this->getOriginal() : null,
+            $action !== 'deleted' ? $this->getAttributes() : null
+        );
     }
 
     protected function getActivityDescription($action)
@@ -78,9 +76,13 @@ trait LogsActivity
         return class_basename($this) . ' #' . $this->id;
     }
 
-    // Relasi ke activity logs
-    public function activityLogs()
+    // Get activity logs for this model
+    public function getActivityLogs($filters = [])
     {
-        return $this->morphMany(ActivityLog::class, 'model');
+        $service = new ActivityLogService();
+        return $service->getUserLogs(Auth::id(), array_merge($filters, [
+            'model_type' => get_class($this),
+            'model_id' => $this->id
+        ]));
     }
 } 

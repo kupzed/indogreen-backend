@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
   
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\ActivityLog;
+use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Request;
@@ -105,16 +105,14 @@ class AuthController extends Controller
      */
     protected function logActivity($action, $description = null)
     {
-        ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => $action,
-            'model_type' => User::class,
-            'model_id' => Auth::id(),
-            'model_name' => Auth::user() ? Auth::user()->name : 'Unknown User',
-            'description' => $description,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-        ]);
+        $service = new ActivityLogService();
+        $service->log(
+            $action,
+            User::class,
+            Auth::id(),
+            Auth::user() ? Auth::user()->name : 'Unknown User',
+            $description
+        );
     }
 
     protected function respondWithToken($token)

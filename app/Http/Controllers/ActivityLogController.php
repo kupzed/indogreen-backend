@@ -2,64 +2,69 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ActivityLog;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityLogController extends Controller
 {
+    protected $service;
+
+    public function __construct()
+    {
+        $this->service = new ActivityLogService();
+    }
+
     /**
      * Display a listing of activity logs
      */
     public function index(Request $request): JsonResponse
     {
-        $query = ActivityLog::with('user')
-            ->orderBy('created_at', 'desc');
-
-        // Filter by action
+        $filters = [];
+        
+        // Build filters
         if ($request->has('action') && $request->action) {
-            $query->where('action', $request->action);
+            $filters['action'] = $request->action;
         }
-
-        // Filter by model type
+        
         if ($request->has('model_type') && $request->model_type) {
-            $query->where('model_type', $request->model_type);
+            $filters['model_type'] = $request->model_type;
         }
-
-        // Filter by user
+        
         if ($request->has('user_id') && $request->user_id) {
-            $query->where('user_id', $request->user_id);
+            $filters['user_id'] = $request->user_id;
         }
-
-        // Filter by date range
+        
         if ($request->has('date_from') && $request->date_from) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $filters['date_from'] = $request->date_from;
         }
-
+        
         if ($request->has('date_to') && $request->date_to) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $filters['date_to'] = $request->date_to;
         }
-
-        // Search by description or model name
+        
         if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('model_name', 'like', "%{$search}%");
-            });
+            $filters['search'] = $request->search;
         }
 
         $perPage = $request->get('per_page', 15);
-        $logs = $query->paginate($perPage);
+        $page = $request->get('page', 1);
+        
+        // Get all logs and apply pagination manually
+        $allLogs = $this->service->getUserLogs(Auth::id(), $filters);
+        $total = count($allLogs);
+        $offset = ($page - 1) * $perPage;
+        $logs = array_slice($allLogs, $offset, $perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $logs->items(),
+            'data' => $logs,
             'pagination' => [
-                'current_page' => $logs->currentPage(),
-                'last_page' => $logs->lastPage(),
-                'per_page' => $logs->perPage(),
-                'total' => $logs->total(),
+                'current_page' => $page,
+                'last_page' => ceil($total / $perPage),
+                'per_page' => $perPage,
+                'total' => $total,
             ]
         ]);
     }
@@ -69,20 +74,27 @@ class ActivityLogController extends Controller
      */
     public function getModelLogs(Request $request, $modelType, $modelId): JsonResponse
     {
-        $logs = ActivityLog::with('user')
-            ->where('model_type', $modelType)
-            ->where('model_id', $modelId)
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 15));
+        $filters = [
+            'model_type' => $modelType,
+            'model_id' => $modelId
+        ];
+        
+        $perPage = $request->get('per_page', 15);
+        $page = $request->get('page', 1);
+        
+        $allLogs = $this->service->getUserLogs(Auth::id(), $filters);
+        $total = count($allLogs);
+        $offset = ($page - 1) * $perPage;
+        $logs = array_slice($allLogs, $offset, $perPage);
 
         return response()->json([
             'success' => true,
-            'data' => $logs->items(),
+            'data' => $logs,
             'pagination' => [
-                'current_page' => $logs->currentPage(),
-                'last_page' => $logs->lastPage(),
-                'per_page' => $logs->perPage(),
-                'total' => $logs->total(),
+                'current_page' => $page,
+                'last_page' => ceil($total / $perPage),
+                'per_page' => $perPage,
+                'total' => $total,
             ]
         ]);
     }
@@ -92,10 +104,7 @@ class ActivityLogController extends Controller
      */
     public function getRecent(): JsonResponse
     {
-        $logs = ActivityLog::with('user')
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+        $logs = $this->service->getRecentLogs(10);
 
         return response()->json([
             'success' => true,
@@ -108,18 +117,7 @@ class ActivityLogController extends Controller
      */
     public function getStats(): JsonResponse
     {
-        $stats = [
-            'total_activities' => ActivityLog::count(),
-            'today_activities' => ActivityLog::whereDate('created_at', today())->count(),
-            'this_week_activities' => ActivityLog::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
-            'this_month_activities' => ActivityLog::whereMonth('created_at', now()->month)->count(),
-            'actions_count' => ActivityLog::selectRaw('action, count(*) as count')
-                ->groupBy('action')
-                ->get(),
-            'models_count' => ActivityLog::selectRaw('model_type, count(*) as count')
-                ->groupBy('model_type')
-                ->get(),
-        ];
+        $stats = $this->service->getStats();
 
         return response()->json([
             'success' => true,
@@ -132,21 +130,55 @@ class ActivityLogController extends Controller
      */
     public function getFilterOptions(): JsonResponse
     {
-        $options = [
-            'actions' => ActivityLog::distinct()->pluck('action'),
-            'model_types' => ActivityLog::distinct()->pluck('model_type'),
-            'users' => ActivityLog::with('user:id,name')
-                ->whereNotNull('user_id')
-                ->distinct()
-                ->get()
-                ->pluck('user')
-                ->unique('id')
-                ->values(),
-        ];
+        $options = $this->service->getFilterOptions();
 
         return response()->json([
             'success' => true,
             'data' => $options
+        ]);
+    }
+
+    /**
+     * Export user logs
+     */
+    public function export(Request $request): JsonResponse
+    {
+        $filters = [];
+        
+        if ($request->has('action') && $request->action) {
+            $filters['action'] = $request->action;
+        }
+        
+        if ($request->has('model_type') && $request->model_type) {
+            $filters['model_type'] = $request->model_type;
+        }
+        
+        if ($request->has('date_from') && $request->date_from) {
+            $filters['date_from'] = $request->date_from;
+        }
+        
+        if ($request->has('date_to') && $request->date_to) {
+            $filters['date_to'] = $request->date_to;
+        }
+
+        $jsonData = $this->service->exportUserLogs(Auth::id(), $filters);
+
+        return response()->json([
+            'success' => true,
+            'data' => json_decode($jsonData, true)
+        ]);
+    }
+
+    /**
+     * Delete user logs
+     */
+    public function deleteUserLogs(): JsonResponse
+    {
+        $this->service->deleteUserLogs(Auth::id());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User logs deleted successfully'
         ]);
     }
 }

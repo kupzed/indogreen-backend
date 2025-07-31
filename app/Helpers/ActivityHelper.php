@@ -2,7 +2,7 @@
 
 namespace App\Helpers;
 
-use App\Models\ActivityLog;
+use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 
@@ -13,18 +13,8 @@ class ActivityHelper
      */
     public static function log($action, $modelType = null, $modelId = null, $modelName = null, $description = null, $oldValues = null, $newValues = null)
     {
-        return ActivityLog::create([
-            'user_id' => Auth::id(),
-            'action' => $action,
-            'model_type' => $modelType,
-            'model_id' => $modelId,
-            'model_name' => $modelName,
-            'old_values' => $oldValues,
-            'new_values' => $newValues,
-            'description' => $description,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-        ]);
+        $service = new ActivityLogService();
+        return $service->log($action, $modelType, $modelId, $modelName, $description, $oldValues, $newValues);
     }
 
     /**

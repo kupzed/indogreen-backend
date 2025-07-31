@@ -38,4 +38,6 @@ Route::group(['middleware' => 'auth:api'], function () {
     Route::get('activity-logs/stats', [ActivityLogController::class, 'getStats']);
     Route::get('activity-logs/filter-options', [ActivityLogController::class, 'getFilterOptions']);
     Route::get('activity-logs/{modelType}/{modelId}', [ActivityLogController::class, 'getModelLogs']);
+    Route::get('activity-logs/export', [ActivityLogController::class, 'export']);
+    Route::delete('activity-logs', [ActivityLogController::class, 'deleteUserLogs']);
 });
