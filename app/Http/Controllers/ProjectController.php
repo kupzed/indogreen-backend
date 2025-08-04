@@ -26,6 +26,14 @@ class ProjectController extends Controller
         if ($request->filled('customer_id')) {
             $query->where('mitra_id', $request->customer_id); // Ganti customer_id dengan mitra_id
         }
+        // Filter Date Range
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('start_date', [$request->date_from, $request->date_to]);
+        } elseif ($request->filled('date_from')) {
+            $query->where('start_date', '>=', $request->date_from);
+        } elseif ($request->filled('date_to')) {
+            $query->where('start_date', '<=', $request->date_to);
+        }
         // Search
         if ($request->filled('search')) {
             $search = $request->search;
@@ -103,6 +111,14 @@ class ProjectController extends Controller
         // Filter Kategori
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
+        }
+        // Filter Date Range
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
+        } elseif ($request->filled('date_from')) {
+            $query->where('activity_date', '>=', $request->date_from);
+        } elseif ($request->filled('date_to')) {
+            $query->where('activity_date', '<=', $request->date_to);
         }
         // Search
         if ($request->filled('search')) {
