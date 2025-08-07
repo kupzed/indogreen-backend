@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
-use App\Models\Mitra; // Gunakan Mitra sebagai pengganti Customer
-use App\Models\Activity; // Tambahkan ini jika belum ada
+use App\Models\Mitra;
+use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -22,9 +22,13 @@ class ProjectController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
+        // Filter kategori
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->kategori);
+        }
         // Filter customer (asumsi customer_id merujuk ke mitra_id yang is_customer=true)
         if ($request->filled('customer_id')) {
-            $query->where('mitra_id', $request->customer_id); // Ganti customer_id dengan mitra_id
+            $query->where('mitra_id', $request->customer_id);
         }
         // Filter Date Range
         if ($request->filled('date_from') && $request->filled('date_to')) {
@@ -40,12 +44,15 @@ class ProjectController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
                   ->orWhere('description', 'like', "%$search%")
+                  ->orWhere('lokasi', 'like', "%$search%")
+                  ->orWhere('no_po', 'like', "%$search%")
+                  ->orWhere('no_so', 'like', "%$search%")
                   ->orWhereHas('mitra', function($q2) use ($search) {
                       $q2->where('nama', 'like', "%$search%");
                   });
             });
         }
-        $projects = $query->paginate(10); // Hapus withQueryString()
+        $projects = $query->paginate(10);
 
         return response()->json([
             'message' => 'Projects retrieved successfully',
@@ -61,8 +68,6 @@ class ProjectController extends Controller
         ]);
     }
 
-    // Metode 'create' tidak lagi diperlukan untuk API
-
     /**
      * Store a newly created resource in storage.
      * @param  \Illuminate\Http\Request  $request
@@ -76,11 +81,19 @@ class ProjectController extends Controller
             'status' => ['required', Rule::in(['Ongoing', 'Prospect', 'Complete', 'Cancel'])],
             'start_date' => 'required|date',
             'finish_date' => 'nullable|date',
-            'mitra_id' => 'required|exists:partners,id', // Harus merujuk ke partners, bukan customers
+            'mitra_id' => 'required|exists:partners,id',
+            'kategori' => ['required', Rule::in([
+                'PLTS Hybrid', 
+                'PLTS Ongrid', 
+                'PLTS Offgrid', 
+                'PJUTS All In One', 
+                'PJUTS Two In One', 
+                'PJUTS Konvensional'
+            ])],
+            'lokasi' => 'nullable|string',
+            'no_po' => 'nullable|string',
+            'no_so' => 'nullable|string',
         ]);
-
-        // Jika Anda memiliki 'customer_id' di Project model, pastikan divalidasi juga
-        // $validated['customer_id'] = $request->input('customer_id'); // Jika masih ada
 
         $project = Project::create($validated);
 
@@ -98,10 +111,10 @@ class ProjectController extends Controller
      */
     public function show(Project $project, Request $request)
     {
-        $project->load('mitra'); // Memuat relasi mitra
+        $project->load('mitra');
 
         // Query aktivitas berdasarkan project_id
-        $query = Activity::with(['project', 'mitra']) // Ganti 'customer' dengan 'mitra'
+        $query = Activity::with(['project', 'mitra'])
             ->where('project_id', $project->id);
 
         // Filter Jenis
@@ -133,10 +146,20 @@ class ProjectController extends Controller
         }
         $activities = $query->paginate(10);
 
-        // Daftar kategori untuk filter (bisa juga diambil dari config atau database)
+        // Daftar kategori untuk filter
         $kategoriList = [
             'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
             'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'
+        ];
+
+        // Daftar kategori project
+        $projectKategoriList = [
+            'PLTS Hybrid', 
+            'PLTS Ongrid', 
+            'PLTS Offgrid', 
+            'PJUTS All In One', 
+            'PJUTS Two In One', 
+            'PJUTS Konvensional'
         ];
 
         return response()->json([
@@ -153,12 +176,10 @@ class ProjectController extends Controller
                     'to' => $activities->lastItem(),
                 ],
                 'kategori_list' => $kategoriList,
-                // Anda mungkin perlu endpoint terpisah untuk mengambil daftar mitra/customer/vendor
+                'project_kategori_list' => $projectKategoriList,
             ]
         ]);
     }
-
-    // Metode 'edit' tidak lagi diperlukan untuk API
 
     /**
      * Update the specified resource in storage.
@@ -174,7 +195,18 @@ class ProjectController extends Controller
             'status' => ['required', Rule::in(['Ongoing', 'Prospect', 'Complete', 'Cancel'])],
             'start_date' => 'required|date',
             'finish_date' => 'nullable|date',
-            'mitra_id' => 'required|exists:partners,id', // Mitra ID
+            'mitra_id' => 'required|exists:partners,id',
+            'kategori' => ['required', Rule::in([
+                'PLTS Hybrid', 
+                'PLTS Ongrid', 
+                'PLTS Offgrid', 
+                'PJUTS All In One', 
+                'PJUTS Two In One', 
+                'PJUTS Konvensional'
+            ])],
+            'lokasi' => 'nullable|string',
+            'no_po' => 'nullable|string',
+            'no_so' => 'nullable|string',
         ]);
 
         $project->update($validated);
@@ -196,7 +228,7 @@ class ProjectController extends Controller
         return response()->json(['message' => 'Project deleted successfully'], 204);
     }
 
-    // Endpoint tambahan untuk mendapatkan daftar customer/mitra (jika diperlukan untuk dropdown di frontend)
+    // Endpoint tambahan untuk mendapatkan daftar customer/mitra
     public function getCustomersForProject()
     {
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);

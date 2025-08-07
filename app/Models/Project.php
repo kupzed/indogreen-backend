@@ -18,7 +18,11 @@ class Project extends Model
         'status',
         'start_date',
         'finish_date',
-        'mitra_id', // Pastikan ini ada di fillable
+        'mitra_id',
+        'kategori',
+        'lokasi',
+        'no_po',
+        'no_so',
     ];
 
     protected $casts = [
@@ -31,9 +35,8 @@ class Project extends Model
         return $this->hasMany(Activity::class);
     }
 
-    public function mitra(): BelongsTo // Tambahkan tipe hint
+    public function mitra(): BelongsTo
     {
-        // Pastikan foreign key di tabel projects adalah 'mitra_id'
         return $this->belongsTo(Mitra::class, 'mitra_id');
     }
 
