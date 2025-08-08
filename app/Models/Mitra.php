@@ -35,6 +35,11 @@ class Mitra extends Model
         return $this->hasMany(Project::class, 'mitra_id');
     }
 
+    public function barangCertificates(): HasMany
+    {
+        return $this->hasMany(BarangCertificate::class, 'mitra_id');
+    }
+
     /**
      * Get activity name for logging
      */

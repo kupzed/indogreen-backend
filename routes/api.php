@@ -7,6 +7,8 @@ use App\Http\Controllers\MitraController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BarangCertificateController;
+use App\Http\Controllers\CertificateController;
  
 Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -28,6 +30,14 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Activity
     Route::apiResource('activities', ActivityController::class);
     Route::get('/activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
+
+    // Barang Certificate
+    Route::apiResource('barang-certificates', BarangCertificateController::class);
+    Route::get('/barang-certificates/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
+
+    // Certificate
+    Route::apiResource('certificates', CertificateController::class);
+    Route::get('/certificates/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
 
     // Dashboard (misal hanya index)
     Route::get('dashboard', [DashboardController::class, 'index']);

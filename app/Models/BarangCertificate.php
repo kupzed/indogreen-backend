@@ -5,35 +5,18 @@ namespace App\Models;
 use App\Models\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Project extends Model
+class BarangCertificate extends Model
 {
     use HasFactory, LogsActivity;
 
     protected $fillable = [
         'name',
-        'description',
-        'status',
-        'start_date',
-        'finish_date',
+        'no_seri',
         'mitra_id',
-        'kategori',
-        'lokasi',
-        'no_po',
-        'no_so',
     ];
-
-    protected $casts = [
-        'start_date' => 'date',
-        'finish_date' => 'date',
-    ];
-
-    public function activities(): HasMany
-    {
-        return $this->hasMany(Activity::class);
-    }
 
     public function mitra(): BelongsTo
     {
@@ -42,7 +25,7 @@ class Project extends Model
 
     public function certificates(): HasMany
     {
-        return $this->hasMany(Certificate::class);
+        return $this->hasMany(Certificate::class, 'barang_certificate_id');
     }
 
     /**
@@ -50,6 +33,6 @@ class Project extends Model
      */
     public function getActivityNameAttribute()
     {
-        return $this->name ?? 'Project #' . $this->id;
+        return $this->name ?? 'Barang Certificate #' . $this->id;
     }
 }
