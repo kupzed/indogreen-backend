@@ -24,6 +24,6 @@ class ProjectSeeder extends Seeder
             'no_so' => 'SO-0001',
         ]);
 
-        \App\Models\Project::factory(15)->create();
+        \App\Models\Project::factory(52)->create();
     }
 } 

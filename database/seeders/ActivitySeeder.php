@@ -98,6 +98,6 @@ class ActivitySeeder extends Seeder
     //     }
     // }
     {
-        \App\Models\Activity::factory(50)->create();
+        \App\Models\Activity::factory(1032)->create();
     }
 } 
