@@ -54,7 +54,7 @@ class BarangCertificateSeeder extends Seeder
         }
 
         // Create additional random barang certificates
-        BarangCertificate::factory(10)->create();
+        BarangCertificate::factory(76)->create();
 
         $this->command->info('Barang certificates seeded successfully.');
     }
