@@ -83,8 +83,8 @@ class CertificateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'no_certificate' => 'required|string|max:30|unique:certificates,no_certificate',
-            'project_id' => 'nullable|exists:projects,id',
-            'barang_certificate_id' => 'nullable|exists:barang_certificates,id',
+            'project_id' => 'required|exists:projects,id',
+            'barang_certificate_id' => 'required|exists:barang_certificates,id',
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
             'date_of_issue' => 'required|date',
             'date_of_expired' => 'required|date|after:date_of_issue',
@@ -123,8 +123,8 @@ class CertificateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'no_certificate' => ['required', 'string', 'max:30', Rule::unique('certificates', 'no_certificate')->ignore($certificate->id)],
-            'project_id' => 'nullable|exists:projects,id',
-            'barang_certificate_id' => 'nullable|exists:barang_certificates,id',
+            'project_id' => 'required|exists:projects,id',
+            'barang_certificate_id' => 'required|exists:barang_certificates,id',
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
             'date_of_issue' => 'required|date',
             'date_of_expired' => 'required|date|after:date_of_issue',

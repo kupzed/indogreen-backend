@@ -37,7 +37,7 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Certificate
     Route::apiResource('certificates', CertificateController::class);
-    Route::get('/certificates/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
+    Route::get('/certificate/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
 
     // Dashboard (misal hanya index)
     Route::get('dashboard', [DashboardController::class, 'index']);
