@@ -33,7 +33,7 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Barang Certificate
     Route::apiResource('barang-certificates', BarangCertificateController::class);
-    Route::get('/barang-certificates/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
+    Route::get('/barang-certificate/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
 
     // Certificate
     Route::apiResource('certificates', CertificateController::class);

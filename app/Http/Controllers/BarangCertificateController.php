@@ -60,7 +60,7 @@ class BarangCertificateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'no_seri' => 'required|string|max:30|unique:barang_certificates,no_seri',
-            'mitra_id' => 'nullable|exists:partners,id',
+            'mitra_id' => 'required|exists:partners,id',
         ]);
 
         $barangCertificate = BarangCertificate::create($validated);
@@ -95,7 +95,7 @@ class BarangCertificateController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'no_seri' => ['required', 'string', 'max:30', Rule::unique('barang_certificates', 'no_seri')->ignore($barangCertificate->id)],
-            'mitra_id' => 'nullable|exists:partners,id',
+            'mitra_id' => 'required|exists:partners,id',
         ]);
 
         $barangCertificate->update($validated);
