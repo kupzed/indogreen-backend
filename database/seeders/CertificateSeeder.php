@@ -27,53 +27,53 @@ class CertificateSeeder extends Seeder
             return;
         }
 
-        // Create some sample certificates
+        // Create some sample certificates with proper relationships
         $certificates = [
             [
-                'name' => 'ISO 9001 Certificate',
+                'name' => 'ISO 9001 Quality Management System',
                 'no_certificate' => 'CERT-001',
-                'project_id' => $projects->random()->id,
-                'barang_certificate_id' => $barangCertificates->random()->id,
+                'project_id' => $projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id,
+                'barang_certificate_id' => $this->getBarangCertificateForProject($projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id),
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-01-15',
                 'date_of_expired' => '2027-01-15',
                 'attachment' => 'certificates/iso9001.pdf',
             ],
             [
-                'name' => 'ISO 14001 Certificate',
+                'name' => 'ISO 14001 Environmental Management',
                 'no_certificate' => 'CERT-002',
-                'project_id' => $projects->random()->id,
-                'barang_certificate_id' => $barangCertificates->random()->id,
+                'project_id' => $projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id,
+                'barang_certificate_id' => $this->getBarangCertificateForProject($projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id),
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-02-20',
                 'date_of_expired' => '2027-02-20',
                 'attachment' => 'certificates/iso14001.pdf',
             ],
             [
-                'name' => 'OHSAS 18001 Certificate',
+                'name' => 'OHSAS 18001 Safety Management',
                 'no_certificate' => 'CERT-003',
-                'project_id' => $projects->random()->id,
-                'barang_certificate_id' => $barangCertificates->random()->id,
+                'project_id' => $projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id,
+                'barang_certificate_id' => $this->getBarangCertificateForProject($projects->where('name', 'LIKE', '%INDOGREEN%')->first()?->id ?? $projects->first()->id),
                 'status' => 'Belum',
                 'date_of_issue' => '2024-03-10',
                 'date_of_expired' => '2027-03-10',
                 'attachment' => null,
             ],
             [
-                'name' => 'Solar Panel Certification',
+                'name' => 'Solar Panel TUV Certification',
                 'no_certificate' => 'CERT-004',
-                'project_id' => $projects->random()->id,
-                'barang_certificate_id' => $barangCertificates->random()->id,
+                'project_id' => $projects->where('name', 'LIKE', '%PLTS%')->first()?->id ?? $projects->first()->id,
+                'barang_certificate_id' => $this->getBarangCertificateForProject($projects->where('name', 'LIKE', '%PLTS%')->first()?->id ?? $projects->first()->id),
                 'status' => 'Tidak Aktif',
                 'date_of_issue' => '2023-06-15',
                 'date_of_expired' => '2026-06-15',
                 'attachment' => 'certificates/solar_panel.pdf',
             ],
             [
-                'name' => 'Inverter Certification',
+                'name' => 'Inverter IEC Certification',
                 'no_certificate' => 'CERT-005',
-                'project_id' => $projects->random()->id,
-                'barang_certificate_id' => $barangCertificates->random()->id,
+                'project_id' => $projects->where('name', 'LIKE', '%PLTS%')->first()?->id ?? $projects->first()->id,
+                'barang_certificate_id' => $this->getBarangCertificateForProject($projects->where('name', 'LIKE', '%PLTS%')->first()?->id ?? $projects->first()->id),
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-04-05',
                 'date_of_expired' => '2027-04-05',
@@ -85,9 +85,31 @@ class CertificateSeeder extends Seeder
             Certificate::create($certificate);
         }
 
-        // Create additional random certificates
-        Certificate::factory(1576)->create();
+        // Create additional random certificates with proper relationships
+        Certificate::factory(100)->create();
 
         $this->command->info('Certificates seeded successfully.');
+    }
+
+    /**
+     * Get a barang certificate that belongs to the same mitra as the project
+     */
+    private function getBarangCertificateForProject($projectId)
+    {
+        if (!$projectId) return null;
+        
+        $project = Project::find($projectId);
+        if (!$project || !$project->mitra_id) return null;
+        
+        $barangCertificate = BarangCertificate::where('mitra_id', $project->mitra_id)->inRandomOrder()->first();
+        
+        // If no barang certificate found for the project's mitra, create one
+        if (!$barangCertificate) {
+            $barangCertificate = BarangCertificate::factory()->create([
+                'mitra_id' => $project->mitra_id
+            ]);
+        }
+        
+        return $barangCertificate->id;
     }
 }

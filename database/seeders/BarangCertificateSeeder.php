@@ -20,32 +20,51 @@ class BarangCertificateSeeder extends Seeder
             return;
         }
 
-        // Create some sample barang certificates
+        // Get specific mitras for consistent seeding
+        $indogreenMitra = Mitra::where('nama', 'LIKE', '%Indogreen%')->first();
+        $mitraJayaMitra = Mitra::where('nama', 'LIKE', '%Mitra Jaya%')->first();
+        
+        // Create some sample barang certificates with consistent mitra assignment
         $barangCertificates = [
             [
-                'name' => 'Solar Panel Certificate',
+                'name' => 'Samsung Solar Panel 400W',
                 'no_seri' => 'SERI-001',
-                'mitra_id' => $mitras->random()->id,
+                'mitra_id' => $indogreenMitra?->id ?? $mitras->first()->id,
             ],
             [
-                'name' => 'Inverter Certificate',
+                'name' => 'SMA Inverter 5000W',
                 'no_seri' => 'SERI-002',
-                'mitra_id' => $mitras->random()->id,
+                'mitra_id' => $indogreenMitra?->id ?? $mitras->first()->id,
             ],
             [
-                'name' => 'Battery Certificate',
+                'name' => 'LG Battery 10kWh',
                 'no_seri' => 'SERI-003',
-                'mitra_id' => $mitras->random()->id,
+                'mitra_id' => $indogreenMitra?->id ?? $mitras->first()->id,
             ],
             [
-                'name' => 'Mounting System Certificate',
+                'name' => 'Victron Mounting System',
                 'no_seri' => 'SERI-004',
-                'mitra_id' => $mitras->random()->id,
+                'mitra_id' => $mitraJayaMitra?->id ?? $mitras->random()->id,
             ],
             [
-                'name' => 'Cable Certificate',
+                'name' => 'Panasonic Cable 4mm²',
                 'no_seri' => 'SERI-005',
-                'mitra_id' => $mitras->random()->id,
+                'mitra_id' => $mitraJayaMitra?->id ?? $mitras->random()->id,
+            ],
+            [
+                'name' => 'Sharp Charge Controller 60A',
+                'no_seri' => 'SERI-006',
+                'mitra_id' => $indogreenMitra?->id ?? $mitras->first()->id,
+            ],
+            [
+                'name' => 'Fronius Solar Pump 2HP',
+                'no_seri' => 'SERI-007',
+                'mitra_id' => $mitraJayaMitra?->id ?? $mitras->random()->id,
+            ],
+            [
+                'name' => 'Jinko Solar Panel 500W',
+                'no_seri' => 'SERI-008',
+                'mitra_id' => $indogreenMitra?->id ?? $mitras->first()->id,
             ],
         ];
 
@@ -54,7 +73,7 @@ class BarangCertificateSeeder extends Seeder
         }
 
         // Create additional random barang certificates
-        BarangCertificate::factory(356)->create();
+        BarangCertificate::factory(50)->create();
 
         $this->command->info('Barang certificates seeded successfully.');
     }

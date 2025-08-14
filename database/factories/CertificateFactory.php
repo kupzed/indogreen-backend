@@ -14,7 +14,20 @@ class CertificateFactory extends Factory
     public function definition(): array
     {
         $project = Project::inRandomOrder()->first();
-        $barangCertificate = BarangCertificate::inRandomOrder()->first();
+        
+        // Get barang certificates that belong to the same mitra as the project
+        $barangCertificate = null;
+        if ($project && $project->mitra_id) {
+            $barangCertificate = BarangCertificate::where('mitra_id', $project->mitra_id)->inRandomOrder()->first();
+        }
+        
+        // If no barang certificate found for the project's mitra, create one
+        if (!$barangCertificate && $project && $project->mitra_id) {
+            $barangCertificate = BarangCertificate::factory()->create([
+                'mitra_id' => $project->mitra_id
+            ]);
+        }
+        
         $dateOfIssue = $this->faker->dateTimeBetween('-2 years', 'now');
         $dateOfExpired = $this->faker->dateTimeBetween($dateOfIssue, '+2 years');
         
