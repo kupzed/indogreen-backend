@@ -167,4 +167,29 @@ class CertificateController extends Controller
             'barang_certificates' => $barangCertificates
         ]);
     }
+
+    /**
+     * Get barang certificates by project ID
+     * @param int $projectId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getBarangCertificatesByProject($projectId)
+    {
+        try {
+            $project = Project::findOrFail($projectId);
+            $barangCertificates = BarangCertificate::where('mitra_id', $project->mitra_id)
+                ->select('id', 'name', 'no_seri')
+                ->get();
+
+            return response()->json([
+                'message' => 'Barang certificates retrieved successfully',
+                'data' => $barangCertificates
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Project not found',
+                'data' => []
+            ], 404);
+        }
+    }
 }
