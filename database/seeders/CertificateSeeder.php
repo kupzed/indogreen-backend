@@ -86,7 +86,7 @@ class CertificateSeeder extends Seeder
         }
 
         // Create additional random certificates
-        Certificate::factory(517)->create();
+        Certificate::factory(1576)->create();
 
         $this->command->info('Certificates seeded successfully.');
     }
