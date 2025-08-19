@@ -6,6 +6,7 @@ use App\Models\Certificate;
 use App\Models\Project;
 use App\Models\BarangCertificate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CertificateController extends Controller
@@ -88,8 +89,12 @@ class CertificateController extends Controller
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
             'date_of_issue' => 'required|date',
             'date_of_expired' => 'required|date|after:date_of_issue',
-            'attachment' => 'nullable|string|max:255',
+            'attachment' => 'nullable|file|max:10240', // 10MB
         ]);
+
+        if ($request->hasFile('attachment')) {
+            $validated['attachment'] = $request->file('attachment')->store('attachments/certificates', 'public');
+        }
 
         $certificate = Certificate::create($validated);
 
@@ -128,8 +133,22 @@ class CertificateController extends Controller
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
             'date_of_issue' => 'required|date',
             'date_of_expired' => 'required|date|after:date_of_issue',
-            'attachment' => 'nullable|string|max:255',
+            'attachment' => 'nullable|file|max:10240', // 10MB
         ]);
+
+        if ($request->hasFile('attachment')) {
+            // Delete old file if exists
+            if ($certificate->attachment) {
+                Storage::disk('public')->delete($certificate->attachment);
+            }
+            $validated['attachment'] = $request->file('attachment')->store('attachments/certificates', 'public');
+        } else if ($request->input('attachment_removed', false)) {
+            // If frontend signals attachment removal
+            if ($certificate->attachment) {
+                Storage::disk('public')->delete($certificate->attachment);
+            }
+            $validated['attachment'] = null;
+        }
 
         $certificate->update($validated);
 
@@ -146,6 +165,9 @@ class CertificateController extends Controller
      */
     public function destroy(Certificate $certificate)
     {
+        if ($certificate->attachment) {
+            Storage::disk('public')->delete($certificate->attachment);
+        }
         $certificate->delete();
 
         return response()->json([

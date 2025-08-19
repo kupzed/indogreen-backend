@@ -108,7 +108,7 @@ class ActivityController extends Controller
         // $validated['customer_id'] = $request->input('customer_id'); // Jika masih ada, sesuaikan logic
 
         if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
         }
 
         $activity = Activity::create($validated);
@@ -183,7 +183,7 @@ class ActivityController extends Controller
             if ($activity->attachment) {
                 Storage::disk('public')->delete($activity->attachment);
             }
-            $validated['attachment'] = $request->file('attachment')->store('attachments', 'public');
+            $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
         } else if ($request->input('attachment_removed', false)) {
             // Jika frontend memberi sinyal attachment dihapus tanpa upload baru
             if ($activity->attachment) {
