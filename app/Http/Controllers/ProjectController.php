@@ -52,19 +52,6 @@ class ProjectController extends Controller
                   });
             });
         }
-        
-        // Sorting
-        if ($request->filled('sort')) {
-            $sortOrder = $request->get('sort', 'desc'); // default desc (terbaru)
-            if ($sortOrder === 'asc') {
-                $query->orderBy('created_at', 'asc'); // terlama
-            } else {
-                $query->orderBy('created_at', 'desc'); // terbaru
-            }
-        } else {
-            $query->orderBy('created_at', 'desc'); // default terbaru
-        }
-        
         $projects = $query->paginate(10);
 
         return response()->json([
