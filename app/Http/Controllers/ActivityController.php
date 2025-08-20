@@ -84,7 +84,7 @@ class ActivityController extends Controller
             'project_id' => 'required|exists:projects,id',
             'kategori' => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
-                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'
+                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
             'activity_date' => 'required|date',
             'attachment' => 'nullable|file|max:10240', // 10MB
@@ -160,7 +160,7 @@ class ActivityController extends Controller
             'project_id' => 'required|exists:projects,id',
             'kategori' => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
-                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'
+                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
             'activity_date' => 'required|date',
             'attachment' => 'nullable|file|max:10240', // 10MB
@@ -231,7 +231,7 @@ class ActivityController extends Controller
             'vendors' => $vendors, // Ini akan mencakup vendor dan internal jika ada
             'kategori_list' => [ // Untuk dropdown kategori di frontend
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
-                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'
+                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ],
             'jenis_list' => ['Internal', 'Customer', 'Vendor'] // Untuk dropdown jenis
         ]);

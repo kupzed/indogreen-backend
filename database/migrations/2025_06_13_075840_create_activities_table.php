@@ -27,6 +27,7 @@ return new class extends Migration
                 'Laporan Teknis',
                 'Surat Masuk',
                 'Surat Keluar',
+                'Kontrak',
             ])->default('Expense Report');
             $table->date('activity_date');
             $table->string('attachment', 255)->nullable();
