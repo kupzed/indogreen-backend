@@ -20,10 +20,10 @@ return new class extends Migration
             $table->boolean('is_vendor')->default(false);
             $table->text('alamat');
             $table->string('website')->nullable();
-            $table->string('email');
-            $table->string('kontak_1');
-            $table->string('kontak_1_nama');
-            $table->string('kontak_1_jabatan');
+            $table->string('email')->nullable();
+            $table->string('kontak_1')->nullable();
+            $table->string('kontak_1_nama')->nullable();
+            $table->string('kontak_1_jabatan')->nullable();
             $table->string('kontak_2_nama')->nullable();
             $table->string('kontak_2')->nullable();
             $table->string('kontak_2_jabatan')->nullable();
