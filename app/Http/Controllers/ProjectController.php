@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Mitra;
 use App\Models\Activity;
+use App\Http\Resources\ProjectResource;
+use App\Http\Requests\ProjectRequest;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -52,11 +54,15 @@ class ProjectController extends Controller
                   });
             });
         }
+        // Filter is_cert_projects
+        if ($request->has('is_cert_projects')) {
+            $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
+        }
         $projects = $query->paginate(10);
 
         return response()->json([
             'message' => 'Projects retrieved successfully',
-            'data' => $projects->items(),
+            'data' => ProjectResource::collection($projects->items()),
             'pagination' => [
                 'total' => $projects->total(),
                 'per_page' => $projects->perPage(),
@@ -70,36 +76,18 @@ class ProjectController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\ProjectRequest  $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function store(Request $request)
+    public function store(ProjectRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'status' => ['required', Rule::in(['Ongoing', 'Prospect', 'Complete', 'Cancel'])],
-            'start_date' => 'required|date',
-            'finish_date' => 'nullable|date',
-            'mitra_id' => 'required|exists:partners,id',
-            'kategori' => ['required', Rule::in([
-                'PLTS Hybrid', 
-                'PLTS Ongrid', 
-                'PLTS Offgrid', 
-                'PJUTS All In One', 
-                'PJUTS Two In One', 
-                'PJUTS Konvensional'
-            ])],
-            'lokasi' => 'nullable|string',
-            'no_po' => 'nullable|string',
-            'no_so' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $project = Project::create($validated);
 
         return response()->json([
             'message' => 'Project created successfully',
-            'data' => $project,
+            'data' => new ProjectResource($project),
         ], 201);
     }
 
@@ -144,6 +132,10 @@ class ProjectController extends Controller
                   });
             });
         }
+        // Filter is_cert_projects
+        if ($request->has('is_cert_projects')) {
+            $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
+        }
         $activities = $query->paginate(10);
 
         // Daftar kategori untuk filter
@@ -165,7 +157,7 @@ class ProjectController extends Controller
         return response()->json([
             'message' => 'Project details retrieved successfully',
             'data' => [
-                'project' => $project,
+                'project' => new ProjectResource($project),
                 'activities' => $activities->items(),
                 'activity_pagination' => [
                     'total' => $activities->total(),
@@ -183,37 +175,19 @@ class ProjectController extends Controller
 
     /**
      * Update the specified resource in storage.
-     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Http\Requests\ProjectRequest  $request
      * @param  \App\Models\Project  $project
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, Project $project)
+    public function update(ProjectRequest $request, Project $project)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'status' => ['required', Rule::in(['Ongoing', 'Prospect', 'Complete', 'Cancel'])],
-            'start_date' => 'required|date',
-            'finish_date' => 'nullable|date',
-            'mitra_id' => 'required|exists:partners,id',
-            'kategori' => ['required', Rule::in([
-                'PLTS Hybrid', 
-                'PLTS Ongrid', 
-                'PLTS Offgrid', 
-                'PJUTS All In One', 
-                'PJUTS Two In One', 
-                'PJUTS Konvensional'
-            ])],
-            'lokasi' => 'nullable|string',
-            'no_po' => 'nullable|string',
-            'no_so' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         $project->update($validated);
 
         return response()->json([
             'message' => 'Project updated successfully',
-            'data' => $project,
+            'data' => new ProjectResource($project),
         ]);
     }
 
@@ -233,5 +207,78 @@ class ProjectController extends Controller
     {
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
         return response()->json(['data' => $customers]);
+    }
+
+    /**
+     * Toggle certificate project status
+     * @param  \App\Models\Project  $project
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function toggleCertProject(Project $project)
+    {
+        $project->update([
+            'is_cert_projects' => !$project->is_cert_projects
+        ]);
+
+        return response()->json([
+            'message' => 'Certificate project status toggled successfully',
+            'data' => new ProjectResource($project),
+        ]);
+    }
+
+    /**
+     * Get projects that are certificate projects
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getCertProjects(Request $request)
+    {
+        $query = Project::with('mitra')->where('is_cert_projects', true);
+
+        // Apply same filters as index method
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->kategori);
+        }
+        if ($request->filled('customer_id')) {
+            $query->where('mitra_id', $request->customer_id);
+        }
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('start_date', [$request->date_from, $request->date_to]);
+        } elseif ($request->filled('date_from')) {
+            $query->where('start_date', '>=', $request->date_from);
+        } elseif ($request->filled('date_to')) {
+            $query->where('start_date', '<=', $request->date_to);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%")
+                  ->orWhere('lokasi', 'like', "%$search%")
+                  ->orWhere('no_po', 'like', "%$search%")
+                  ->orWhere('no_so', 'like', "%$search%")
+                  ->orWhereHas('mitra', function($q2) use ($search) {
+                      $q2->where('nama', 'like', "%$search%");
+                  });
+            });
+        }
+
+        $projects = $query->paginate(10);
+
+        return response()->json([
+            'message' => 'Certificate projects retrieved successfully',
+            'data' => ProjectResource::collection($projects->items()),
+            'pagination' => [
+                'total' => $projects->total(),
+                'per_page' => $projects->perPage(),
+                'current_page' => $projects->currentPage(),
+                'last_page' => $projects->lastPage(),
+                'from' => $projects->firstItem(),
+                'to' => $projects->lastItem(),
+            ]
+        ]);
     }
 }

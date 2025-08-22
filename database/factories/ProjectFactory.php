@@ -53,6 +53,7 @@ class ProjectFactory extends Factory
             'lokasi' => $location,
             'no_po' => $this->faker->optional()->numerify('PO-####'),
             'no_so' => $this->faker->optional()->numerify('SO-####'),
+            'is_cert_projects' => $this->faker->boolean(20), // 20% chance of being true
             'created_at' => now(),
             'updated_at' => now(),
         ];

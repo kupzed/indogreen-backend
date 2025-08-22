@@ -12,6 +12,7 @@ class ProjectSeeder extends Seeder
     {
         $mitraIds = Mitra::where('is_customer', true)->pluck('id')->toArray();
         
+        // Create INDOGREEN project only
         Project::create([
             'name' => 'INDOGREEN',
             'description' => 'Project Internal Indogreen',
@@ -22,6 +23,7 @@ class ProjectSeeder extends Seeder
             'lokasi' => 'Yasmin, Bogor',
             'no_po' => 'PO-0001',
             'no_so' => 'SO-0001',
+            'is_cert_projects' => false,
         ]);
 
         \App\Models\Project::factory(52)->create();

@@ -30,6 +30,7 @@ return new class extends Migration
             $table->text('lokasi')->nullable();
             $table->text('no_po')->nullable();
             $table->text('no_so')->nullable();
+            $table->boolean('is_cert_projects')->default(false);
             $table->timestamps();
         });
     }

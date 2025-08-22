@@ -23,11 +23,13 @@ class Project extends Model
         'lokasi',
         'no_po',
         'no_so',
+        'is_cert_projects',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'finish_date' => 'date',
+        'is_cert_projects' => 'boolean',
     ];
 
     public function activities(): HasMany
@@ -51,5 +53,38 @@ class Project extends Model
     public function getActivityNameAttribute()
     {
         return $this->name ?? 'Project #' . $this->id;
+    }
+
+    /**
+     * Scope to filter certificate projects
+     */
+    public function scopeCertProjects($query)
+    {
+        return $query->where('is_cert_projects', true);
+    }
+
+    /**
+     * Scope to filter non-certificate projects
+     */
+    public function scopeNonCertProjects($query)
+    {
+        return $query->where('is_cert_projects', false);
+    }
+
+    /**
+     * Check if project is a certificate project
+     */
+    public function isCertProject(): bool
+    {
+        return $this->is_cert_projects;
+    }
+
+    /**
+     * Toggle certificate project status
+     */
+    public function toggleCertProject(): bool
+    {
+        $this->update(['is_cert_projects' => !$this->is_cert_projects]);
+        return $this->is_cert_projects;
     }
 }

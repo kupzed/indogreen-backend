@@ -13,7 +13,13 @@ class CertificateFactory extends Factory
 
     public function definition(): array
     {
-        $project = Project::inRandomOrder()->first();
+        // Only get projects that are certificate projects
+        $project = Project::where('is_cert_projects', true)->inRandomOrder()->first();
+        
+        // If no certificate projects found, skip this factory creation
+        if (!$project) {
+            throw new \Exception('No certificate projects found. Please ensure some projects have is_cert_projects set to true.');
+        }
         
         // Get barang certificates that belong to the same mitra as the project
         $barangCertificate = null;
@@ -34,7 +40,7 @@ class CertificateFactory extends Factory
         return [
             'name' => $this->faker->words(3, true),
             'no_certificate' => $this->faker->unique()->numerify('CERT-#####'),
-            'project_id' => $project?->id ?? null,
+            'project_id' => $project->id,
             'barang_certificate_id' => $barangCertificate?->id ?? null,
             'status' => $this->faker->randomElement(['Belum', 'Tidak Aktif', 'Aktif']),
             'date_of_issue' => $dateOfIssue->format('Y-m-d'),

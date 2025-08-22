@@ -14,11 +14,12 @@ class CertificateSeeder extends Seeder
      */
     public function run(): void
     {
-        $projects = Project::all();
+        // Only get projects that are certificate projects
+        $projects = Project::where('is_cert_projects', true)->get();
         $barangCertificates = BarangCertificate::all();
 
         if ($projects->isEmpty()) {
-            $this->command->warn('No projects found. Please run ProjectSeeder first.');
+            $this->command->warn('No certificate projects found. Please run ProjectSeeder first and ensure some projects have is_cert_projects set to true.');
             return;
         }
 
@@ -85,10 +86,14 @@ class CertificateSeeder extends Seeder
             Certificate::create($certificate);
         }
 
-        // Create additional random certificates with proper relationships
-        Certificate::factory(100)->create();
+        // Create additional random certificates only for certificate projects
+        // Calculate how many certificates to create based on number of certificate projects
+        $certificateProjectsCount = $projects->count();
+        $certificatesToCreate = min(100, $certificateProjectsCount * 5); // Max 5 certificates per project or 100 total
+        
+        Certificate::factory($certificatesToCreate)->create();
 
-        $this->command->info('Certificates seeded successfully.');
+        $this->command->info("Certificates seeded successfully for {$certificateProjectsCount} certificate projects.");
     }
 
     /**

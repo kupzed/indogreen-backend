@@ -21,6 +21,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 Route::group(['middleware' => 'auth:api'], function () {
     // Project
     Route::apiResource('projects', ProjectController::class);
+    Route::get('/projects/customers', [ProjectController::class, 'getCustomersForProject']);
+    Route::patch('/projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
+    Route::get('/projects/certificate/list', [ProjectController::class, 'getCertProjects']);
 
     // Mitra/Partner
     Route::apiResource('mitras', MitraController::class);
