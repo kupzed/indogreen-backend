@@ -26,6 +26,6 @@ class ProjectSeeder extends Seeder
             'is_cert_projects' => false,
         ]);
 
-        \App\Models\Project::factory(52)->create();
+        // \App\Models\Project::factory(52)->create();
     }
 } 

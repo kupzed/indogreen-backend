@@ -34,6 +34,6 @@ class MitraSeeder extends Seeder
             ],
         ]);
 
-        \App\Models\Mitra::factory(67)->create();
+        // \App\Models\Mitra::factory(67)->create();
     }
 } 
