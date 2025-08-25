@@ -16,7 +16,7 @@ class ProjectSeeder extends Seeder
         Project::create([
             'name' => 'INDOGREEN',
             'description' => 'Project Internal Indogreen',
-            'status' => 'Prospect',
+            'status' => 'Ongoing',
             'start_date' => '2023-05-19',
             'mitra_id' => 1,
             'kategori' => 'PLTS Hybrid',
