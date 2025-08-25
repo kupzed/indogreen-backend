@@ -87,10 +87,18 @@ class CertificateController extends Controller
             'project_id' => 'required|exists:projects,id',
             'barang_certificate_id' => 'required|exists:barang_certificates,id',
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
-            'date_of_issue' => 'required|date',
-            'date_of_expired' => 'required|date|after:date_of_issue',
+            'date_of_issue' => 'nullable|date',
+            'date_of_expired' => 'nullable|date|after:date_of_issue',
             'attachment' => 'nullable|file|max:10240', // 10MB
         ]);
+
+        // Convert empty date strings to null
+        if (isset($validated['date_of_issue']) && $validated['date_of_issue'] === '') {
+            $validated['date_of_issue'] = null;
+        }
+        if (isset($validated['date_of_expired']) && $validated['date_of_expired'] === '') {
+            $validated['date_of_expired'] = null;
+        }
 
         if ($request->hasFile('attachment')) {
             $validated['attachment'] = $request->file('attachment')->store('attachments/certificates', 'public');
@@ -131,10 +139,18 @@ class CertificateController extends Controller
             'project_id' => 'required|exists:projects,id',
             'barang_certificate_id' => 'required|exists:barang_certificates,id',
             'status' => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
-            'date_of_issue' => 'required|date',
-            'date_of_expired' => 'required|date|after:date_of_issue',
+            'date_of_issue' => 'nullable|date',
+            'date_of_expired' => 'nullable|date|after:date_of_issue',
             'attachment' => 'nullable|file|max:10240', // 10MB
         ]);
+
+        // Convert empty date strings to null
+        if (isset($validated['date_of_issue']) && $validated['date_of_issue'] === '') {
+            $validated['date_of_issue'] = null;
+        }
+        if (isset($validated['date_of_expired']) && $validated['date_of_expired'] === '') {
+            $validated['date_of_expired'] = null;
+        }
 
         if ($request->hasFile('attachment')) {
             // Delete old file if exists
