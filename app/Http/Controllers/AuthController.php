@@ -147,6 +147,9 @@ class AuthController extends Controller
         $userModel->name = $validated['name'];
         $userModel->save();
 
+        // Log the profile update activity
+        $this->logActivity('profile_update', 'User updated profile name to: ' . $validated['name']);
+
         return response()->json($userModel);
     }
 }
