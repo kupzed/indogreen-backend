@@ -7,7 +7,8 @@ use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Request;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
   
   
 class AuthController extends Controller
@@ -122,5 +123,30 @@ class AuthController extends Controller
             'token_type' => 'bearer',
             'expires_in' => Auth::factory()->getTTL() * 60
         ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        // Hanya mengizinkan update nama
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            // email tidak bisa diubah di sini sesuai requirement kamu
+        ]);
+
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        // Get the user model instance
+        $userModel = User::find($user->id);
+        if (!$userModel) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $userModel->name = $validated['name'];
+        $userModel->save();
+
+        return response()->json($userModel);
     }
 }
