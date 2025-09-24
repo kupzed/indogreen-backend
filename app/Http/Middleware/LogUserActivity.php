@@ -30,21 +30,29 @@ class LogUserActivity
                 '/api/projects/*' => 'viewed project',
                 '/api/activities/*' => 'viewed activity',
                 '/api/mitras/*' => 'viewed mitra',
+                '/api/barang-certificates/*' => 'viewed barang certificate',
+                '/api/certificates/*' => 'viewed certificate',
             ],
             'POST' => [
                 '/api/projects' => 'created project',
                 '/api/activities' => 'created activity',
                 '/api/mitras' => 'created mitra',
+                '/api/barang-certificates' => 'created barang certificate',
+                '/api/certificates' => 'created certificate',
             ],
             'PUT' => [
                 '/api/projects/*' => 'updated project',
                 '/api/activities/*' => 'updated activity',
                 '/api/mitras/*' => 'updated mitra',
+                '/api/barang-certificates/*' => 'updated barang certificate',
+                '/api/certificates/*' => 'updated certificate',
             ],
             'DELETE' => [
                 '/api/projects/*' => 'deleted project',
                 '/api/activities/*' => 'deleted activity',
                 '/api/mitras/*' => 'deleted mitra',
+                '/api/barang-certificates/*' => 'deleted barang certificate',
+                '/api/certificates/*' => 'deleted certificate',
             ]
         ];
 
