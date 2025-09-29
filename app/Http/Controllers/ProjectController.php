@@ -58,7 +58,13 @@ class ProjectController extends Controller
         if ($request->has('is_cert_projects')) {
             $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
         }
-        $projects = $query->paginate(10);
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed)) {
+            $perPage = 10;
+        }
+
+        $projects = $query->paginate($perPage);
 
         return response()->json([
             'message' => 'Projects retrieved successfully',
@@ -136,7 +142,13 @@ class ProjectController extends Controller
         if ($request->has('is_cert_projects')) {
             $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
         }
-        $activities = $query->paginate(10);
+        
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed)) {
+            $perPage = 10;
+        }
+        $activities = $query->paginate($perPage);
 
         // Daftar kategori untuk filter
         $kategoriList = [
@@ -266,8 +278,14 @@ class ProjectController extends Controller
             });
         }
 
-        $projects = $query->paginate(10);
-
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed)) {
+            $perPage = 10;
+        }
+    
+        $projects = $query->paginate($perPage);
+    
         return response()->json([
             'message' => 'Certificate projects retrieved successfully',
             'data' => ProjectResource::collection($projects->items()),
