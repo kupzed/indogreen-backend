@@ -51,8 +51,13 @@ class ActivityController extends Controller
                   });
             });
         }
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed, true)) {
+            $perPage = 10;
+        }
 
-        $activities = $query->paginate(10); // Hapus withQueryString() karena ini untuk Blade views
+        $activities = $query->paginate($perPage);
 
         return response()->json([
             'message' => 'Activities retrieved successfully',

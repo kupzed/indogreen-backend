@@ -45,8 +45,13 @@ class MitraController extends Controller
                   ->orWhere('website', 'like', "%$search%");
             });
         }
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed, true)) {
+            $perPage = 10;
+        }
 
-        $mitras = $query->paginate(10); // Hapus withQueryString()
+        $mitras = $query->paginate($perPage); // Hapus withQueryString()
 
         return response()->json([
             'message' => 'Mitra retrieved successfully',

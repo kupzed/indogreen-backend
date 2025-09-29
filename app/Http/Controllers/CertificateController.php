@@ -57,8 +57,13 @@ class CertificateController extends Controller
                   });
             });
         }
+        $perPage  = $request->integer('per_page', 10);
+        $allowed  = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed, true)) {
+            $perPage = 10;
+        }
 
-        $certificates = $query->paginate(10);
+        $certificates = $query->paginate($perPage);
 
         return response()->json([
             'message' => 'Certificates retrieved successfully',

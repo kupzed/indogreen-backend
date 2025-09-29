@@ -33,8 +33,13 @@ class BarangCertificateController extends Controller
                   });
             });
         }
+        $perPage = $request->integer('per_page', 10);
+        $allowed = [10, 25, 50, 100];
+        if (!in_array($perPage, $allowed, true)) {
+            $perPage = 10;
+        }
 
-        $barangCertificates = $query->paginate(10);
+        $barangCertificates = $query->paginate($perPage);
 
         return response()->json([
             'message' => 'Barang certificates retrieved successfully',
