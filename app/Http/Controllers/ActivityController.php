@@ -8,30 +8,17 @@ use App\Models\Mitra;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule; // Tambahkan ini untuk validasi unik jika diperlukan
+use Illuminate\Validation\Rule;
 
 class ActivityController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     * Mengembalikan daftar aktivitas dengan filter dan pencarian.
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function index(Request $request)
     {
         $query = Activity::with(['project', 'mitra']); 
 
-        // Filter Jenis
-        if ($request->filled('jenis')) {
-            $query->where('jenis', $request->jenis);
-        }
+        if ($request->filled('jenis'))     $query->where('jenis', $request->jenis);
+        if ($request->filled('kategori'))  $query->where('kategori', $request->kategori);
 
-        // Filter Kategori
-        if ($request->filled('kategori')) {
-            $query->where('kategori', $request->kategori);
-        }
-
-        // Filter Date Range
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
         } elseif ($request->filled('date_from')) {
@@ -40,7 +27,6 @@ class ActivityController extends Controller
             $query->where('activity_date', '<=', $request->date_to);
         }
 
-        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -51,17 +37,18 @@ class ActivityController extends Controller
                   });
             });
         }
+
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
-        if (!in_array($perPage, $allowed, true)) {
-            $perPage = 10;
-        }
+        if (!in_array($perPage, $allowed, true)) $perPage = 10;
 
         $activities = $query->paginate($perPage);
 
+        $items = collect($activities->items())->map->toArray()->all();
+
         return response()->json([
             'message' => 'Activities retrieved successfully',
-            'data' => $activities->items(), // Ambil hanya item data
+            'data' => $items,
             'pagination' => [
                 'total' => $activities->total(),
                 'per_page' => $activities->perPage(),
@@ -73,44 +60,26 @@ class ActivityController extends Controller
         ]);
     }
 
-    // Metode 'create' tidak lagi diperlukan untuk API karena SvelteKit akan menangani formulir pembuatan
-    // Anda bisa membuat endpoint terpisah untuk mengambil daftar project, customer, mitra jika diperlukan oleh form SvelteKit
-
-    /**
-     * Store a newly created resource in storage.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'project_id' => 'required|exists:projects,id',
-            'kategori' => ['required', Rule::in([
+            'name'         => 'required|string|max:255',
+            'description'  => 'required|string',
+            'project_id'   => 'required|exists:projects,id',
+            'kategori'     => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
-            'activity_date' => 'required|date',
-            'attachment' => 'nullable|file|max:10240', // 10MB
-            'jenis' => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id' => 'nullable|exists:partners,id', // Mitra ID bisa null untuk Internal
-            'from' => 'nullable|string', // Tambahkan validasi from
-            'to' => 'nullable|string',   // Tambahkan validasi to
+            'activity_date'=> 'required|date',
+            'attachment'   => 'nullable|file|max:10240',
+            'jenis'        => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
+            'mitra_id'     => 'nullable|exists:partners,id',
+            'from'         => 'nullable|string',
+            'to'           => 'nullable|string',
         ]);
 
-        // Logic pengisian customer_id/mitra_id
-        if ($request->jenis === 'Internal') {
-            $validated['mitra_id'] = 1; // Pastikan ID 1 adalah mitra 'Internal' yang valid
-        } 
-        // Logika untuk 'Vendor' dan 'Customer' sudah benar jika mitra_id dikirim dari frontend
-        // Unset customer_id karena sudah digantikan oleh mitra_id
-        if (isset($validated['customer_id'])) {
-             unset($validated['customer_id']); 
-        }
-        
-        // Hapus penanganan customer_id jika memang tidak digunakan lagi dan digantikan oleh mitra_id
-        // $validated['customer_id'] = $request->input('customer_id'); // Jika masih ada, sesuaikan logic
+        if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
+        if (isset($validated['customer_id'])) unset($validated['customer_id']);
 
         if ($request->hasFile('attachment')) {
             $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
@@ -120,125 +89,91 @@ class ActivityController extends Controller
 
         return response()->json([
             'message' => 'Activity created successfully',
-            'data' => $activity->load(['project', 'mitra']), // Load relasi untuk respons
-        ], 201); // 201 Created
+            'data' => $activity->load(['project', 'mitra'])->toArray(),
+        ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     * Mengembalikan detail aktivitas tunggal.
-     * @param  \App\Models\Activity  $activity
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show(Activity $activity)
     {
         try {
-            $activity->load(['project', 'mitra']); // Hapus 'customer' jika sudah digantikan oleh 'mitra'
-            Log::info('Activity Data:', ['activity' => $activity->toArray()]); // Log tetap berguna untuk debugging
+            $activity->load(['project', 'mitra']);
+            Log::info('Activity Data:', ['activity' => $activity->toArray()]);
 
             return response()->json([
                 'message' => 'Activity retrieved successfully',
-                'data' => $activity,
+                'data' => $activity->toArray(),
             ]);
         } catch (\Exception $e) {
             Log::error('Error showing activity: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Failed to retrieve activity',
                 'error' => $e->getMessage()
-            ], 500); // 500 Internal Server Error
+            ], 500);
         }
     }
 
-    // Metode 'edit' tidak lagi diperlukan untuk API
-
-    /**
-     * Update the specified resource in storage.
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Activity  $activity
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Request $request, Activity $activity)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'project_id' => 'required|exists:projects,id',
-            'kategori' => ['required', Rule::in([
+            'name'         => 'required|string|max:255',
+            'description'  => 'required|string',
+            'project_id'   => 'required|exists:projects,id',
+            'kategori'     => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
-            'activity_date' => 'required|date',
-            'attachment' => 'nullable|file|max:10240', // 10MB
-            'jenis' => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id' => 'nullable|exists:partners,id', // Mitra ID bisa null untuk Internal
-            'from' => 'nullable|string', // Tambahkan validasi from
-            'to' => 'nullable|string',   // Tambahkan validasi to
+            'activity_date'=> 'required|date',
+            'attachment'   => 'nullable|file|max:10240',
+            'jenis'        => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
+            'mitra_id'     => 'nullable|exists:partners,id',
+            'from'         => 'nullable|string',
+            'to'           => 'nullable|string',
         ]);
 
-        // Logic pengisian customer_id/mitra_id
-        if ($request->jenis === 'Internal') {
-            $validated['mitra_id'] = 1;
-        } 
-        if (isset($validated['customer_id'])) {
-             unset($validated['customer_id']); 
-        }
+        if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
+        if (isset($validated['customer_id'])) unset($validated['customer_id']);
 
         if ($request->hasFile('attachment')) {
-            // Hapus file lama jika ada
-            if ($activity->attachment) {
-                Storage::disk('public')->delete($activity->attachment);
-            }
+            if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
             $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
-        } else if ($request->input('attachment_removed', false)) {
-            // Jika frontend memberi sinyal attachment dihapus tanpa upload baru
-            if ($activity->attachment) {
-                Storage::disk('public')->delete($activity->attachment);
-            }
+        } elseif ($request->input('attachment_removed', false)) {
+            if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
             $validated['attachment'] = null;
         }
-
 
         $activity->update($validated);
 
         return response()->json([
             'message' => 'Activity updated successfully',
-            'data' => $activity->load(['project', 'mitra']),
+            'data' => $activity->load(['project', 'mitra'])->toArray(),
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * @param  \App\Models\Activity  $activity
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function destroy(Activity $activity)
     {
-        if ($activity->attachment) {
-            Storage::disk('public')->delete($activity->attachment);
-        }
+        if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
         $activity->delete();
 
         return response()->json([
             'message' => 'Activity deleted successfully'
-        ], 204); // 204 No Content
+        ], 204);
     }
     
-    // API endpoint tambahan untuk mendapatkan daftar proyek, customer, dan mitra
     public function getFormDependencies()
     {
-        $projects = Project::all(['id', 'name', 'mitra_id']); // Tambahkan mitra_id agar frontend bisa tahu customer dari project
+        $projects  = Project::all(['id', 'name', 'mitra_id']);
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
-        $vendors = Mitra::where('is_vendor', true)->get(['id', 'nama']);
+        $vendors   = Mitra::where('is_vendor', true)->get(['id', 'nama']);
 
         return response()->json([
-            'projects' => $projects,
-            'customers' => $customers, // Jika masih pakai customer secara terpisah dari mitra
-            'vendors' => $vendors, // Ini akan mencakup vendor dan internal jika ada
-            'kategori_list' => [ // Untuk dropdown kategori di frontend
+            'projects'      => $projects,
+            'customers'     => $customers,
+            'vendors'       => $vendors,
+            'kategori_list' => [
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ],
-            'jenis_list' => ['Internal', 'Customer', 'Vendor'] // Untuk dropdown jenis
+            'jenis_list'    => ['Internal', 'Customer', 'Vendor']
         ]);
     }
 }
