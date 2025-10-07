@@ -20,7 +20,6 @@ return new class extends Migration
             $table->enum('status', ['Belum', 'Tidak Aktif', 'Aktif'])->default('Belum');
             $table->date('date_of_issue')->nullable();
             $table->date('date_of_expired')->nullable();
-            $table->string('attachment', 255)->nullable();
             $table->timestamps();
         });
     }

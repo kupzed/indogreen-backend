@@ -30,7 +30,6 @@ return new class extends Migration
                 'Kontrak',
             ])->default('Expense Report');
             $table->date('activity_date');
-            $table->string('attachment', 255)->nullable();
             $table->enum('jenis', [
                 'Internal',
                 'Customer',
