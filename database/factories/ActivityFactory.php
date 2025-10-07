@@ -37,7 +37,6 @@ class ActivityFactory extends Factory
             'jenis' => $jenis,
             'mitra_id' => $mitra_id,
             'activity_date' => $this->faker->date(),
-            'attachment' => $this->faker->optional()->filePath(),
             'from' => $this->faker->optional()->sentence(4),
             'to' => $this->faker->optional()->sentence(4),
             'created_at' => now(),

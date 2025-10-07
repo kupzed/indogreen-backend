@@ -15,9 +15,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             MitraSeeder::class,
             ProjectSeeder::class,
-            // BarangCertificateSeeder::class,
-            // CertificateSeeder::class,
-            // ActivitySeeder::class,
+            BarangCertificateSeeder::class,
+            CertificateSeeder::class,
+            ActivitySeeder::class,
         ]);
     }
 }

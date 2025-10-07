@@ -38,7 +38,6 @@ class CertificateSeeder extends Seeder
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-01-15',
                 'date_of_expired' => '2027-01-15',
-                'attachment' => 'certificates/iso9001.pdf',
             ],
             [
                 'name' => 'ISO 14001 Environmental Management',
@@ -48,7 +47,6 @@ class CertificateSeeder extends Seeder
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-02-20',
                 'date_of_expired' => '2027-02-20',
-                'attachment' => 'certificates/iso14001.pdf',
             ],
             [
                 'name' => 'OHSAS 18001 Safety Management',
@@ -58,7 +56,6 @@ class CertificateSeeder extends Seeder
                 'status' => 'Belum',
                 'date_of_issue' => '2024-03-10',
                 'date_of_expired' => '2027-03-10',
-                'attachment' => null,
             ],
             [
                 'name' => 'Solar Panel TUV Certification',
@@ -68,7 +65,6 @@ class CertificateSeeder extends Seeder
                 'status' => 'Tidak Aktif',
                 'date_of_issue' => '2023-06-15',
                 'date_of_expired' => '2026-06-15',
-                'attachment' => 'certificates/solar_panel.pdf',
             ],
             [
                 'name' => 'Inverter IEC Certification',
@@ -78,7 +74,6 @@ class CertificateSeeder extends Seeder
                 'status' => 'Aktif',
                 'date_of_issue' => '2024-04-05',
                 'date_of_expired' => '2027-04-05',
-                'attachment' => 'certificates/inverter.pdf',
             ],
         ];
 

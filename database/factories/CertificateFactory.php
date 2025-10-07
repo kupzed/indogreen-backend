@@ -45,7 +45,6 @@ class CertificateFactory extends Factory
             'status' => $this->faker->randomElement(['Belum', 'Tidak Aktif', 'Aktif']),
             'date_of_issue' => $dateOfIssue->format('Y-m-d'),
             'date_of_expired' => $dateOfExpired->format('Y-m-d'),
-            'attachment' => $this->faker->optional()->filePath(),
             'created_at' => now(),
             'updated_at' => now(),
         ];
