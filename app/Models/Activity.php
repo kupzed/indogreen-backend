@@ -6,6 +6,7 @@ use App\Models\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -40,6 +41,11 @@ class Activity extends Model
     public function mitra(): BelongsTo
     {
         return $this->belongsTo(Mitra::class, 'mitra_id');
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ActivityAttachment::class);
     }
 
     public function getActivityNameAttribute()
@@ -77,17 +83,20 @@ class Activity extends Model
 
     public function getAttachmentsAttribute(): array
     {
-        if (!$this->attachment) return [];
-
-        if (preg_match('#^https?://#i', $this->attachment)) {
-            return [[
-                'path'      => $this->attachment,
-                'name'      => basename(parse_url($this->attachment, PHP_URL_PATH) ?? $this->attachment),
-                'size'      => null,
-                'sizeLabel' => null,
-                'url'       => $this->attachment,
-            ]];
+        $atts = $this->getRelationValue('attachments') ?? $this->attachments()->get();
+        if ($atts && $atts->count() > 0) {
+            return $atts->map(fn($att) => [
+                'id'          => $att->id,
+                'name'        => $att->name ?: basename($att->file_path),
+                'description' => $att->description,
+                'size'        => $att->size,
+                'sizeLabel'   => $att->size ? $this->formatBytes($att->size) : null,
+                'path'        => $att->file_path,
+                'url'         => asset('storage/'.$att->file_path),
+            ])->all();
         }
+
+        if (!$this->attachment) return [];
 
         $rel  = $this->normalizePublicPath($this->attachment);
         $disk = Storage::disk('public');

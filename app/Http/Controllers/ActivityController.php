@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\ActivityAttachment;
 use App\Models\Project;
 use App\Models\Mitra;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -14,7 +16,7 @@ class ActivityController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Activity::with(['project', 'mitra']); 
+        $query = Activity::with(['project', 'mitra', 'attachments']);
 
         if ($request->filled('jenis'))     $query->where('jenis', $request->jenis);
         if ($request->filled('kategori'))  $query->where('kategori', $request->kategori);
@@ -29,12 +31,12 @@ class ActivityController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                  ->orWhere('description', 'like', "%$search%")
-                  ->orWhereHas('project', function($q2) use ($search) {
-                      $q2->where('name', 'like', "%$search%");
-                  });
+                    ->orWhere('description', 'like', "%$search%")
+                    ->orWhereHas('project', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%$search%");
+                    });
             });
         }
 
@@ -43,7 +45,6 @@ class ActivityController extends Controller
         if (!in_array($perPage, $allowed, true)) $perPage = 10;
 
         $activities = $query->paginate($perPage);
-
         $items = collect($activities->items())->map->toArray()->all();
 
         return response()->json([
@@ -63,41 +64,65 @@ class ActivityController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'description'  => 'required|string',
-            'project_id'   => 'required|exists:projects,id',
-            'kategori'     => ['required', Rule::in([
+            'name'          => 'required|string|max:255',
+            'description'   => 'required|string',
+            'project_id'    => 'required|exists:projects,id',
+            'kategori'      => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
-            'activity_date'=> 'required|date',
-            'attachment'   => 'nullable|file|max:10240',
-            'jenis'        => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'     => 'nullable|exists:partners,id',
-            'from'         => 'nullable|string',
-            'to'           => 'nullable|string',
+            'activity_date' => 'required|date',
+            'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
+            'mitra_id'      => 'nullable|exists:mitras,id',
+            'from'          => 'nullable|string|max:255',
+            'to'            => 'nullable|string|max:255',
+
+            // Multi-file
+            'attachments.*'             => ['file', 'max:10240'], // 10MB/file
+            'attachment_names'          => ['array'],
+            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
+            'attachment_descriptions'   => ['array'],
+            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
         ]);
 
+        // Aturan bisnis eksisting
         if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
-        if (isset($validated['customer_id'])) unset($validated['customer_id']);
 
-        if ($request->hasFile('attachment')) {
-            $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
-        }
+        return DB::transaction(function () use ($request, $validated) {
+            $activity = Activity::create($validated);
 
-        $activity = Activity::create($validated);
+            // Simpan lampiran baru
+            $files = $request->file('attachments', []);
+            $names = $request->input('attachment_names', []);
+            $descs = $request->input('attachment_descriptions', []);
 
-        return response()->json([
-            'message' => 'Activity created successfully',
-            'data' => $activity->load(['project', 'mitra'])->toArray(),
-        ], 201);
+            foreach ($files as $i => $file) {
+                if (!$file) continue;
+
+                $path = $file->store('attachments/activities/' . $activity->id, 'public');
+                $displayName = $names[$i] ?? $file->getClientOriginalName();
+                $desc = $descs[$i] ?? null;
+
+                $activity->attachments()->create([
+                    'name'        => $displayName,
+                    'description' => $desc,
+                    'file_path'   => $path,
+                    'mime'        => $file->getClientMimeType(),
+                    'size'        => $file->getSize(),
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Activity created successfully',
+                'data' => $activity->load(['project', 'mitra', 'attachments'])->toArray(),
+            ], 201);
+        });
     }
 
     public function show(Activity $activity)
     {
         try {
-            $activity->load(['project', 'mitra']);
-            Log::info('Activity Data:', ['activity' => $activity->toArray()]);
+            $activity->load(['project', 'mitra', 'attachments']);
 
             return response()->json([
                 'message' => 'Activity retrieved successfully',
@@ -115,50 +140,92 @@ class ActivityController extends Controller
     public function update(Request $request, Activity $activity)
     {
         $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'description'  => 'required|string',
-            'project_id'   => 'required|exists:projects,id',
-            'kategori'     => ['required', Rule::in([
+            'name'          => 'required|string|max:255',
+            'description'   => 'required|string',
+            'project_id'    => 'required|exists:projects,id',
+            'kategori'      => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak'
             ])],
-            'activity_date'=> 'required|date',
-            'attachment'   => 'nullable|file|max:10240',
-            'jenis'        => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'     => 'nullable|exists:partners,id',
-            'from'         => 'nullable|string',
-            'to'           => 'nullable|string',
+            'activity_date' => 'required|date',
+            'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
+            'mitra_id'      => 'nullable|exists:mitras,id',
+            'from'          => 'nullable|string|max:255',
+            'to'            => 'nullable|string|max:255',
+
+            // Multi-file
+            'attachments.*'             => ['file', 'max:10240'],
+            'attachment_names'          => ['array'],
+            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
+            'attachment_descriptions'   => ['array'],
+            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
+            'removed_existing_ids'      => ['array'],
+            'removed_existing_ids.*'    => ['integer', 'exists:activity_attachments,id'],
         ]);
 
         if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
-        if (isset($validated['customer_id'])) unset($validated['customer_id']);
 
-        if ($request->hasFile('attachment')) {
-            if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
-            $validated['attachment'] = $request->file('attachment')->store('attachments/activities', 'public');
-        } elseif ($request->input('attachment_removed', false)) {
-            if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
-            $validated['attachment'] = null;
-        }
+        return DB::transaction(function () use ($request, $activity, $validated) {
+            // Hapus lampiran lama yang dipilih
+            $removedIds = $request->input('removed_existing_ids', []);
+            if (!empty($removedIds)) {
+                $toDelete = ActivityAttachment::whereIn('id', $removedIds)
+                    ->where('activity_id', $activity->id)
+                    ->get();
 
-        $activity->update($validated);
+                foreach ($toDelete as $att) {
+                    if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
+                        Storage::disk('public')->delete($att->file_path);
+                    }
+                    $att->delete();
+                }
+            }
 
-        return response()->json([
-            'message' => 'Activity updated successfully',
-            'data' => $activity->load(['project', 'mitra'])->toArray(),
-        ]);
+            $activity->update($validated);
+
+            // Simpan lampiran baru
+            $files = $request->file('attachments', []);
+            $names = $request->input('attachment_names', []);
+            $descs = $request->input('attachment_descriptions', []);
+
+            foreach ($files as $i => $file) {
+                if (!$file) continue;
+
+                $path = $file->store('attachments/activities/' . $activity->id, 'public');
+                $displayName = $names[$i] ?? $file->getClientOriginalName();
+                $desc = $descs[$i] ?? null;
+
+                $activity->attachments()->create([
+                    'name'        => $displayName,
+                    'description' => $desc,
+                    'file_path'   => $path,
+                    'mime'        => $file->getClientMimeType(),
+                    'size'        => $file->getSize(),
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Activity updated successfully',
+                'data' => $activity->load(['project', 'mitra', 'attachments'])->toArray(),
+            ]);
+        });
     }
 
     public function destroy(Activity $activity)
     {
-        if ($activity->attachment) Storage::disk('public')->delete($activity->attachment);
+        // Hapus semua file fisik sebelum delete record
+        foreach ($activity->attachments as $att) {
+            if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
+                Storage::disk('public')->delete($att->file_path);
+            }
+        }
         $activity->delete();
 
         return response()->json([
             'message' => 'Activity deleted successfully'
-        ], 204);
+        ]);
     }
-    
+
     public function getFormDependencies()
     {
         $projects  = Project::all(['id', 'name', 'mitra_id']);
