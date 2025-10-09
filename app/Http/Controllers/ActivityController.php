@@ -73,7 +73,7 @@ class ActivityController extends Controller
             ])],
             'activity_date' => 'required|date',
             'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'      => 'nullable|exists:mitras,id',
+            'mitra_id'      => 'nullable|exists:partners,id',
             'from'          => 'nullable|string|max:255',
             'to'            => 'nullable|string|max:255',
 
@@ -149,7 +149,7 @@ class ActivityController extends Controller
             ])],
             'activity_date' => 'required|date',
             'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'      => 'nullable|exists:mitras,id',
+            'mitra_id'      => 'nullable|exists:partners,id',
             'from'          => 'nullable|string|max:255',
             'to'            => 'nullable|string|max:255',
 
