@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityAttachment extends Model
 {
+    use HasFactory, LogsActivity;
+
     protected $fillable = [
         'activity_id',
         'name',
@@ -19,6 +23,11 @@ class ActivityAttachment extends Model
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class);
+    }
+
+    public function getActivityName(): string
+    {
+        return $this->name ?: 'Activity Attachment #' . $this->id;
     }
 
     protected $appends = ['url'];
