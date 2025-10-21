@@ -136,23 +136,35 @@ class CertificateController extends Controller
             'date_of_issue'         => 'nullable|date',
             'date_of_expired'       => 'nullable|date|after:date_of_issue',
 
-            // Multi-file
+            // Multi-file (lampiran baru)
             'attachments.*'             => ['file', 'max:10240'],
             'attachment_names'          => ['array'],
             'attachment_names.*'        => ['nullable', 'string', 'max:255'],
             'attachment_descriptions'   => ['array'],
             'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
+
+            // Hapus lampiran lama
             'removed_existing_ids'      => ['array'],
             'removed_existing_ids.*'    => ['integer', 'exists:certificate_attachments,id'],
+
+            // EDIT lampiran lama (nama & deskripsi)
+            'existing_attachment_ids'               => ['array'],
+            'existing_attachment_ids.*'             => ['integer', 'exists:certificate_attachments,id'],
+            'existing_attachment_names'             => ['array'],
+            'existing_attachment_names.*'           => ['nullable', 'string', 'max:255'],
+            'existing_attachment_descriptions'      => ['array'],
+            'existing_attachment_descriptions.*'    => ['nullable', 'string', 'max:500'],
         ]);
 
-        if (($validated['date_of_issue'] ?? '') === '')   $validated['date_of_issue'] = null;
+        if (($validated['date_of_issue'] ?? '') === '') {
+            $validated['date_of_issue'] = null;
+        }
         if (array_key_exists('date_of_expired', $validated) && $validated['date_of_expired'] === '') {
             $validated['date_of_expired'] = null;
         }
 
         return DB::transaction(function () use ($request, $certificate, $validated) {
-            // Hapus lampiran lama yang dipilih
+            // 1) Hapus lampiran lama yang dipilih
             $removedIds = $request->input('removed_existing_ids', []);
             if (!empty($removedIds)) {
                 $toDelete = CertificateAttachment::whereIn('id', $removedIds)
@@ -167,9 +179,31 @@ class CertificateController extends Controller
                 }
             }
 
+            // 2) Update data certificate
             $certificate->update($validated);
 
-            // Simpan lampiran baru
+            // 3) Update NAMA & DESKRIPSI lampiran lama (jika ada)
+            $existingIds   = array_values($request->input('existing_attachment_ids', []));
+            $existingNames = array_values($request->input('existing_attachment_names', []));
+            $existingDescs = array_values($request->input('existing_attachment_descriptions', []));
+
+            foreach ($existingIds as $i => $attId) {
+                $att = CertificateAttachment::where('id', $attId)
+                    ->where('certificate_id', $certificate->id)
+                    ->first();
+
+                if ($att) {
+                    if (array_key_exists($i, $existingNames)) {
+                        $att->name = $existingNames[$i];
+                    }
+                    if (array_key_exists($i, $existingDescs)) {
+                        $att->description = $existingDescs[$i];
+                    }
+                    $att->save();
+                }
+            }
+
+            // 4) Simpan lampiran baru (jika ada)
             $files = $request->file('attachments', []);
             $names = $request->input('attachment_names', []);
             $descs = $request->input('attachment_descriptions', []);

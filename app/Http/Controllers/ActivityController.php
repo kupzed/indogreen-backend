@@ -153,20 +153,32 @@ class ActivityController extends Controller
             'from'          => 'nullable|string|max:255',
             'to'            => 'nullable|string|max:255',
 
-            // Multi-file
+            // Multi-file (lampiran baru)
             'attachments.*'             => ['file', 'max:10240'],
             'attachment_names'          => ['array'],
             'attachment_names.*'        => ['nullable', 'string', 'max:255'],
             'attachment_descriptions'   => ['array'],
             'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
+
+            // Hapus lampiran lama
             'removed_existing_ids'      => ['array'],
             'removed_existing_ids.*'    => ['integer', 'exists:activity_attachments,id'],
+
+            // EDIT lampiran lama (nama & deskripsi)
+            'existing_attachment_ids'               => ['array'],
+            'existing_attachment_ids.*'             => ['integer', 'exists:activity_attachments,id'],
+            'existing_attachment_names'             => ['array'],
+            'existing_attachment_names.*'           => ['nullable', 'string', 'max:255'],
+            'existing_attachment_descriptions'      => ['array'],
+            'existing_attachment_descriptions.*'    => ['nullable', 'string', 'max:500'],
         ]);
 
-        if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
+        if ($request->jenis === 'Internal') {
+            $validated['mitra_id'] = 1;
+        }
 
         return DB::transaction(function () use ($request, $activity, $validated) {
-            // Hapus lampiran lama yang dipilih
+            // 1) Hapus lampiran lama yang dipilih
             $removedIds = $request->input('removed_existing_ids', []);
             if (!empty($removedIds)) {
                 $toDelete = ActivityAttachment::whereIn('id', $removedIds)
@@ -181,9 +193,32 @@ class ActivityController extends Controller
                 }
             }
 
+            // 2) Update data activity
             $activity->update($validated);
 
-            // Simpan lampiran baru
+            // 3) Update NAMA & DESKRIPSI lampiran lama (jika ada)
+            $existingIds   = array_values($request->input('existing_attachment_ids', []));
+            $existingNames = array_values($request->input('existing_attachment_names', []));
+            $existingDescs = array_values($request->input('existing_attachment_descriptions', []));
+
+            foreach ($existingIds as $i => $attId) {
+                $att = ActivityAttachment::where('id', $attId)
+                    ->where('activity_id', $activity->id)
+                    ->first();
+
+                if ($att) {
+                    // Hanya update kalau value tersedia (boleh null -> kosongkan)
+                    if (array_key_exists($i, $existingNames)) {
+                        $att->name = $existingNames[$i];
+                    }
+                    if (array_key_exists($i, $existingDescs)) {
+                        $att->description = $existingDescs[$i];
+                    }
+                    $att->save();
+                }
+            }
+
+            // 4) Simpan lampiran baru (jika ada)
             $files = $request->file('attachments', []);
             $names = $request->input('attachment_names', []);
             $descs = $request->input('attachment_descriptions', []);
@@ -210,6 +245,7 @@ class ActivityController extends Controller
             ]);
         });
     }
+
 
     public function destroy(Activity $activity)
     {
