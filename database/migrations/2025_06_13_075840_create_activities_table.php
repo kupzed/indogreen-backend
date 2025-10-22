@@ -28,6 +28,9 @@ return new class extends Migration
                 'Surat Masuk',
                 'Surat Keluar',
                 'Kontrak',
+                'Berita Acara',
+                'Receive Item',
+                'Other',
             ])->default('Expense Report');
             $table->date('activity_date');
             $table->enum('jenis', [
