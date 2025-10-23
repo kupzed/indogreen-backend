@@ -119,6 +119,9 @@ class ProjectController extends Controller
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
+        if ($request->filled('mitra_id')) {
+            $query->where('mitra_id', $request->mitra_id);
+        }
         // Filter Date Range
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
@@ -142,7 +145,7 @@ class ProjectController extends Controller
         if ($request->has('is_cert_projects')) {
             $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
         }
-        
+
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
         if (!in_array($perPage, $allowed)) {
@@ -153,18 +156,29 @@ class ProjectController extends Controller
         // Daftar kategori untuk filter
         $kategoriList = [
             'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
-            'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar'
+            'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
+            'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
         ];
 
         // Daftar kategori project
         $projectKategoriList = [
-            'PLTS Hybrid', 
-            'PLTS Ongrid', 
-            'PLTS Offgrid', 
-            'PJUTS All In One', 
-            'PJUTS Two In One', 
+            'PLTS Hybrid',
+            'PLTS Ongrid',
+            'PLTS Offgrid',
+            'PJUTS All In One',
+            'PJUTS Two In One',
             'PJUTS Konvensional'
         ];
+
+        // Ambil semua vendor unik dari aktivitas proyek ini (tidak terpengaruh filter di atas)
+        $vendorIds = Activity::where('project_id', $project->id)
+            ->where('jenis', 'Vendor')
+            ->whereNotNull('mitra_id')
+            ->pluck('mitra_id')
+            ->unique()
+            ->values();
+
+        $vendorOptions = Mitra::whereIn('id', $vendorIds)->get(['id', 'nama']);
 
         return response()->json([
             'message' => 'Project details retrieved successfully',
@@ -181,6 +195,7 @@ class ProjectController extends Controller
                 ],
                 'kategori_list' => $kategoriList,
                 'project_kategori_list' => $projectKategoriList,
+                'vendor_options' => $vendorOptions,
             ]
         ]);
     }
@@ -283,9 +298,9 @@ class ProjectController extends Controller
         if (!in_array($perPage, $allowed)) {
             $perPage = 10;
         }
-    
+
         $projects = $query->paginate($perPage);
-    
+
         return response()->json([
             'message' => 'Certificate projects retrieved successfully',
             'data' => ProjectResource::collection($projects->items()),
