@@ -14,7 +14,7 @@ class ActivityFactory extends Factory
     public function definition(): array
     {
         $kategori = $this->faker->randomElement([
-            'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
+            'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
             'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
             'Kontrak', 'Berita Acara', 'Receive Item', 'Other'
         ]);

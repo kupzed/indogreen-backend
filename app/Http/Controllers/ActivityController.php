@@ -145,7 +145,7 @@ class ActivityController extends Controller
             'description'   => 'required|string',
             'project_id'    => 'required|exists:projects,id',
             'kategori'      => ['required', Rule::in([
-                'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
+                'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
                 'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
             ])],
@@ -275,7 +275,7 @@ class ActivityController extends Controller
             'customers'     => $customers,
             'vendors'       => $vendors,
             'kategori_list' => [
-                'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
+                'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
                 'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
             ],

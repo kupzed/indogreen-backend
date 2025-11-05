@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('kategori', [
                 'Expense Report',
                 'Invoice',
+                'Invoice & FP',
                 'Purchase Order',
                 'Payment',
                 'Quotation',
