@@ -54,6 +54,17 @@ class ProjectController extends Controller
                   });
             });
         }
+
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc','desc'], true)) $sortDir = 'desc';
+
+        if ($sortBy === 'start_date') {
+            $query->orderBy('start_date', $sortDir)->orderBy('id', $sortDir);
+        } else {
+            $query->orderBy('id', $sortDir);
+        }
+
         // Filter is_cert_projects
         if ($request->has('is_cert_projects')) {
             $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
