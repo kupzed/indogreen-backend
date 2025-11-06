@@ -33,11 +33,22 @@ class ActivityController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                    ->orWhere('description', 'like', "%$search%")
-                    ->orWhereHas('project', function ($q2) use ($search) {
-                        $q2->where('name', 'like', "%$search%");
-                    });
+                ->orWhere('description', 'like', "%$search%")
+                ->orWhereHas('project', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%$search%");
+                });
             });
+        }
+
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc', 'desc'], true)) $sortDir = 'desc';
+
+        if ($sortBy === 'activity_date') {
+            $query->orderBy('activity_date', $sortDir)
+                ->orderBy('id', $sortDir);
+        } else {
+            $query->orderBy('id', $sortDir);
         }
 
         $perPage = $request->integer('per_page', 10);
