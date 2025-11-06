@@ -33,14 +33,22 @@ class CertificateController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                    ->orWhere('no_certificate', 'like', "%$search%")
-                    ->orWhereHas('project', function ($q2) use ($search) {
-                        $q2->where('name', 'like', "%$search%");
-                    })
-                    ->orWhereHas('barangCertificate', function ($q2) use ($search) {
-                        $q2->where('name', 'like', "%$search%");
-                    });
+                ->orWhere('no_certificate', 'like', "%$search%")
+                ->orWhereHas('project', fn($q2) => $q2->where('name', 'like', "%$search%"))
+                ->orWhereHas('barangCertificate', fn($q2) => $q2->where('name', 'like', "%$search%"));
             });
+        }
+
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc','desc'], true)) $sortDir = 'desc';
+
+        if ($sortBy === 'date_of_issue') {
+            $query->orderBy('date_of_issue', $sortDir)->orderBy('id', $sortDir);
+        } elseif ($sortBy === 'date_of_expired') {
+            $query->orderBy('date_of_expired', $sortDir)->orderBy('id', $sortDir);
+        } else {
+            $query->orderBy('id', $sortDir);
         }
 
         $perPage = $request->integer('per_page', 10);
