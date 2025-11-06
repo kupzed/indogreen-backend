@@ -116,24 +116,29 @@ class ProjectController extends Controller
      */
     public function show(Project $project, Request $request)
     {
+        // Detail project + relasi dasar
         $project->load('mitra');
 
-        // Query aktivitas berdasarkan project_id
-        $query = Activity::with(['project', 'mitra'])
+        // === Activities query (berdasarkan project) ===
+        $query = Activity::with(['project', 'mitra', 'attachments'])
             ->where('project_id', $project->id);
 
         // Filter Jenis
         if ($request->filled('jenis')) {
             $query->where('jenis', $request->jenis);
         }
+
         // Filter Kategori
         if ($request->filled('kategori')) {
             $query->where('kategori', $request->kategori);
         }
+
+        // Filter Mitra (dipakai saat Jenis = Vendor di frontend)
         if ($request->filled('mitra_id')) {
             $query->where('mitra_id', $request->mitra_id);
         }
-        // Filter Date Range
+
+        // Filter Date Range (activity_date)
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
         } elseif ($request->filled('date_from')) {
@@ -141,47 +146,60 @@ class ProjectController extends Controller
         } elseif ($request->filled('date_to')) {
             $query->where('activity_date', '<=', $request->date_to);
         }
-        // Search
+
+        // Search (nama aktivitas, deskripsi, nama project, nama mitra)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                  ->orWhere('description', 'like', "%$search%")
-                  ->orWhereHas('project', function($q2) use ($search) {
-                      $q2->where('name', 'like', "%$search%");
-                  });
+            $like = "%{$search}%";
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                ->orWhere('description', 'like', $like)
+                ->orWhereHas('project', function ($q2) use ($like) {
+                    $q2->where('name', 'like', $like);
+                })
+                ->orWhereHas('mitra', function ($q3) use ($like) {
+                    $q3->where('nama', 'like', $like);
+                });
             });
         }
-        // Filter is_cert_projects
-        if ($request->has('is_cert_projects')) {
-            $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
+
+        // Sorting: 'created' (pakai id) atau 'activity_date'
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
         }
 
+        if ($sortBy === 'activity_date') {
+            $query->orderBy('activity_date', $sortDir)
+                ->orderBy('id', $sortDir); // tie-breaker stabil
+        } else {
+            // default 'created'
+            $query->orderBy('id', $sortDir);
+        }
+
+        // Pagination
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
-        if (!in_array($perPage, $allowed)) {
+        if (!in_array($perPage, $allowed, true)) {
             $perPage = 10;
         }
         $activities = $query->paginate($perPage);
 
-        // Daftar kategori untuk filter
+        // List kategori untuk referensi (sinkron dengan frontend)
         $kategoriList = [
-            'Expense Report', 'Invoice', 'Purchase Order', 'Payment', 'Quotation',
-            'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-            'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
+            'Expense Report','Invoice','Invoice & FP','Purchase Order','Payment',
+            'Quotation','Faktur Pajak','Kasbon','Laporan Teknis','Surat Masuk',
+            'Surat Keluar','Kontrak','Berita Acara','Receive Item','Other',
         ];
 
-        // Daftar kategori project
+        // List kategori project (opsional untuk UI)
         $projectKategoriList = [
-            'PLTS Hybrid',
-            'PLTS Ongrid',
-            'PLTS Offgrid',
-            'PJUTS All In One',
-            'PJUTS Two In One',
-            'PJUTS Konvensional'
+            'PLTS Hybrid','PLTS Ongrid','PLTS Offgrid',
+            'PJUTS All In One','PJUTS Two In One','PJUTS Konvensional',
         ];
 
-        // Ambil semua vendor unik dari aktivitas proyek ini (tidak terpengaruh filter di atas)
+        // Vendor unik di project (untuk dropdown filter vendor) - tidak terpengaruh filter di atas
         $vendorIds = Activity::where('project_id', $project->id)
             ->where('jenis', 'Vendor')
             ->whereNotNull('mitra_id')
@@ -207,9 +225,11 @@ class ProjectController extends Controller
                 'kategori_list' => $kategoriList,
                 'project_kategori_list' => $projectKategoriList,
                 'vendor_options' => $vendorOptions,
-            ]
+            ],
         ]);
     }
+
+
 
     /**
      * Update the specified resource in storage.
@@ -302,6 +322,16 @@ class ProjectController extends Controller
                       $q2->where('nama', 'like', "%$search%");
                   });
             });
+        }
+
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc','desc'], true)) $sortDir = 'desc';
+
+        if ($sortBy === 'start_date') {
+            $query->orderBy('start_date', $sortDir)->orderBy('id', $sortDir);
+        } else {
+            $query->orderBy('id', $sortDir);
         }
 
         $perPage = $request->integer('per_page', 10);
