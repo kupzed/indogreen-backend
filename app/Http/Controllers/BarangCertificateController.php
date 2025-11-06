@@ -9,20 +9,14 @@ use Illuminate\Validation\Rule;
 
 class BarangCertificateController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function index(Request $request)
     {
         $query = BarangCertificate::with('mitra');
 
-        // Filter by mitra_id
         if ($request->filled('mitra_id')) {
             $query->where('mitra_id', $request->mitra_id);
         }
 
-        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -33,6 +27,19 @@ class BarangCertificateController extends Controller
                   });
             });
         }
+
+        // Sorting (default created desc via id desc)
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        $dir     = in_array($sortDir, ['asc','desc'], true) ? $sortDir : 'desc';
+
+        switch ($sortBy) {
+            case 'created':
+            default:
+                $query->orderBy('id', $dir);
+                break;
+        }
+
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
         if (!in_array($perPage, $allowed, true)) {
@@ -55,11 +62,6 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -76,11 +78,6 @@ class BarangCertificateController extends Controller
         ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     * @param  \App\Models\BarangCertificate  $barangCertificate
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function show(BarangCertificate $barangCertificate)
     {
         return response()->json([
@@ -89,12 +86,6 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\BarangCertificate  $barangCertificate
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function update(Request $request, BarangCertificate $barangCertificate)
     {
         $validated = $request->validate([
@@ -111,11 +102,6 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * @param  \App\Models\BarangCertificate  $barangCertificate
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function destroy(BarangCertificate $barangCertificate)
     {
         $barangCertificate->delete();
@@ -125,10 +111,6 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    /**
-     * Get form dependencies for barang certificates
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function getFormDependencies()
     {
         $mitras = Mitra::select('id', 'nama')->get();

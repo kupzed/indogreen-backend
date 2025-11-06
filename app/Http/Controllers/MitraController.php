@@ -17,16 +17,13 @@ class MitraController extends Controller
     {
         $query = Mitra::query();
 
-        // Filter kategori
         if ($request->filled('kategori')) {
             $kategori = $request->kategori;
-            // Pastikan kategori yang dikirim dari frontend valid
             if (in_array($kategori, ['pribadi', 'perusahaan', 'customer', 'vendor'])) {
                 $query->where('is_' . $kategori, true);
             }
         }
 
-        // Filter Date Range
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('created_at', [$request->date_from, $request->date_to]);
         } elseif ($request->filled('date_from')) {
@@ -35,7 +32,6 @@ class MitraController extends Controller
             $query->where('created_at', '<=', $request->date_to);
         }
 
-        // Search
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
@@ -45,13 +41,26 @@ class MitraController extends Controller
                   ->orWhere('website', 'like', "%$search%");
             });
         }
+
+        // Sorting (default created desc via id)
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        $dir     = in_array($sortDir, ['asc','desc'], true) ? $sortDir : 'desc';
+
+        switch ($sortBy) {
+            case 'created':
+            default:
+                $query->orderBy('id', $dir);
+                break;
+        }
+
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
         if (!in_array($perPage, $allowed, true)) {
             $perPage = 10;
         }
 
-        $mitras = $query->paginate($perPage); // Hapus withQueryString()
+        $mitras = $query->paginate($perPage);
 
         return response()->json([
             'message' => 'Mitra retrieved successfully',
