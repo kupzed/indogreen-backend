@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('activities', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->text('short_desc')->nullable();
             $table->text('description');
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->enum('kategori', [
