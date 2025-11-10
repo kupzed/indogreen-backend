@@ -33,7 +33,7 @@ class ActivityController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%")
-                ->orWhere('description', 'like', "%$search%")
+                ->orWhere('short_desc', 'like', "%$search%")
                 ->orWhereHas('project', function ($q2) use ($search) {
                     $q2->where('name', 'like', "%$search%");
                 });
@@ -76,6 +76,7 @@ class ActivityController extends Controller
     {
         $validated = $request->validate([
             'name'          => 'required|string|max:255',
+            'short_desc'    => 'nullable|string|max:80',
             'description'   => 'required|string',
             'project_id'    => 'required|exists:projects,id',
             'kategori'      => ['required', Rule::in([
@@ -153,6 +154,7 @@ class ActivityController extends Controller
     {
         $validated = $request->validate([
             'name'          => 'required|string|max:255',
+            'short_desc'    => 'nullable|string|max:80',
             'description'   => 'required|string',
             'project_id'    => 'required|exists:projects,id',
             'kategori'      => ['required', Rule::in([

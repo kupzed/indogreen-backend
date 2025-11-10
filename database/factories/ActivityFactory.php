@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Project;
 use App\Models\Mitra;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class ActivityFactory extends Factory
 {
@@ -32,6 +33,7 @@ class ActivityFactory extends Factory
         }
         return [
             'name' => $this->faker->sentence(3),
+            'short_desc'   => Str::limit($this->faker->realText(120), 80, ''),
             'description' => $this->faker->paragraph(2),
             'project_id' => $project?->id ?? 1,
             'kategori' => $kategori,
