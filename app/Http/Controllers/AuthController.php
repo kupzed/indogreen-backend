@@ -8,6 +8,8 @@ use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AuthController extends Controller
 {
@@ -106,4 +108,40 @@ class AuthController extends Controller
 
         return response()->json($userModel);
     }
+
+    public function changePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password' => [
+                'required', 'string', 'min:8', 'confirmed',
+                'regex:/[a-z]/',  // huruf kecil
+                'regex:/[A-Z]/',  // huruf besar
+                'different:current_password',
+            ],
+        ], [
+            'password.regex' => 'Password harus mengandung huruf kecil dan huruf besar.',
+            'password.different' => 'Password baru tidak boleh sama dengan password lama.',
+        ]);
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!Hash::check($validated['current_password'], $user->password)) {
+            return response()->json(['message' => 'Password lama tidak cocok'], 422);
+        }
+
+        if (Hash::check($validated['password'], $user->password)) {
+            return response()->json(['message' => 'Password baru tidak boleh sama dengan password lama'], 422);
+        }
+
+        // Model User punya cast 'password' => 'hashed', jadi set plain akan otomatis di-hash.
+        $user->password = $validated['password'];
+        $user->save();
+
+        $this->logActivity('password_update', 'User changed password');
+
+        return response()->json(['message' => 'Password berhasil diperbarui']);
+    }
+
 }
