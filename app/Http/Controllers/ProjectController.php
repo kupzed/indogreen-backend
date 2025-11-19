@@ -4,11 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Mitra;
-use App\Models\Activity;
 use App\Http\Resources\ProjectResource;
 use App\Http\Requests\ProjectRequest;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -119,117 +117,20 @@ class ProjectController extends Controller
         // Detail project + relasi dasar
         $project->load('mitra');
 
-        // === Activities query (berdasarkan project) ===
-        $query = Activity::with(['project', 'mitra', 'attachments'])
-            ->where('project_id', $project->id);
-
-        // Filter Jenis
-        if ($request->filled('jenis')) {
-            $query->where('jenis', $request->jenis);
-        }
-
-        // Filter Kategori
-        if ($request->filled('kategori')) {
-            $query->where('kategori', $request->kategori);
-        }
-
-        // Filter Mitra (dipakai saat Jenis = Vendor di frontend)
-        if ($request->filled('mitra_id')) {
-            $query->where('mitra_id', $request->mitra_id);
-        }
-
-        // Filter Date Range (activity_date)
-        if ($request->filled('date_from') && $request->filled('date_to')) {
-            $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
-        } elseif ($request->filled('date_from')) {
-            $query->where('activity_date', '>=', $request->date_from);
-        } elseif ($request->filled('date_to')) {
-            $query->where('activity_date', '<=', $request->date_to);
-        }
-
-        // Search (nama aktivitas, deskripsi, nama project, nama mitra)
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $like = "%{$search}%";
-            $query->where(function ($q) use ($like) {
-                $q->where('name', 'like', $like)
-                ->orWhere('description', 'like', $like)
-                ->orWhereHas('project', function ($q2) use ($like) {
-                    $q2->where('name', 'like', $like);
-                })
-                ->orWhereHas('mitra', function ($q3) use ($like) {
-                    $q3->where('nama', 'like', $like);
-                });
-            });
-        }
-
-        // Sorting: 'created' (pakai id) atau 'activity_date'
-        $sortBy  = $request->input('sort_by', 'created');
-        $sortDir = strtolower($request->input('sort_dir', 'desc'));
-        if (!in_array($sortDir, ['asc', 'desc'], true)) {
-            $sortDir = 'desc';
-        }
-
-        if ($sortBy === 'activity_date') {
-            $query->orderBy('activity_date', $sortDir)
-                ->orderBy('id', $sortDir); // tie-breaker stabil
-        } else {
-            // default 'created'
-            $query->orderBy('id', $sortDir);
-        }
-
-        // Pagination
-        $perPage = $request->integer('per_page', 10);
-        $allowed = [10, 25, 50, 100];
-        if (!in_array($perPage, $allowed, true)) {
-            $perPage = 10;
-        }
-        $activities = $query->paginate($perPage);
-
-        // List kategori untuk referensi (sinkron dengan frontend)
-        $kategoriList = [
-            'Expense Report','Invoice','Invoice & FP','Purchase Order','Payment',
-            'Quotation','Faktur Pajak','Kasbon','Laporan Teknis','Surat Masuk',
-            'Surat Keluar','Kontrak','Berita Acara','Receive Item','Other',
-        ];
-
-        // List kategori project (opsional untuk UI)
+        // List kategori project (opsional, kalau masih mau dipakai buat UI)
         $projectKategoriList = [
             'PLTS Hybrid','PLTS Ongrid','PLTS Offgrid',
             'PJUTS All In One','PJUTS Two In One','PJUTS Konvensional',
         ];
 
-        // Vendor unik di project (untuk dropdown filter vendor) - tidak terpengaruh filter di atas
-        $vendorIds = Activity::where('project_id', $project->id)
-            ->where('jenis', 'Vendor')
-            ->whereNotNull('mitra_id')
-            ->pluck('mitra_id')
-            ->unique()
-            ->values();
-
-        $vendorOptions = Mitra::whereIn('id', $vendorIds)->get(['id', 'nama']);
-
         return response()->json([
             'message' => 'Project details retrieved successfully',
             'data' => [
                 'project' => new ProjectResource($project),
-                'activities' => $activities->items(),
-                'activity_pagination' => [
-                    'total' => $activities->total(),
-                    'per_page' => $activities->perPage(),
-                    'current_page' => $activities->currentPage(),
-                    'last_page' => $activities->lastPage(),
-                    'from' => $activities->firstItem(),
-                    'to' => $activities->lastItem(),
-                ],
-                'kategori_list' => $kategoriList,
                 'project_kategori_list' => $projectKategoriList,
-                'vendor_options' => $vendorOptions,
             ],
         ]);
     }
-
-
 
     /**
      * Update the specified resource in storage.
