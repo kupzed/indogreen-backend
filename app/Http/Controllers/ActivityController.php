@@ -18,9 +18,27 @@ class ActivityController extends Controller
     {
         $query = Activity::with(['project', 'mitra', 'attachments']);
 
-        if ($request->filled('jenis'))     $query->where('jenis', $request->jenis);
-        if ($request->filled('kategori'))  $query->where('kategori', $request->kategori);
+        // Filter by project (dipakai di halaman detail project)
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        }
 
+        // Filter Jenis
+        if ($request->filled('jenis')) {
+            $query->where('jenis', $request->jenis);
+        }
+
+        // Filter Kategori
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->kategori);
+        }
+
+        // Filter Mitra (dipakai saat Jenis = Vendor di frontend)
+        if ($request->filled('mitra_id')) {
+            $query->where('mitra_id', $request->mitra_id);
+        }
+
+        // Filter Date Range (activity_date)
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
         } elseif ($request->filled('date_from')) {
@@ -29,46 +47,73 @@ class ActivityController extends Controller
             $query->where('activity_date', '<=', $request->date_to);
         }
 
+        // Search (nama, short_desc, description, nama project, nama mitra)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                ->orWhere('short_desc', 'like', "%$search%")
-                ->orWhereHas('project', function ($q2) use ($search) {
-                    $q2->where('name', 'like', "%$search%");
+            $like   = "%{$search}%";
+
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                ->orWhere('short_desc', 'like', $like)
+                ->orWhere('description', 'like', $like)
+                ->orWhereHas('project', function ($q2) use ($like) {
+                    $q2->where('name', 'like', $like);
+                })
+                ->orWhereHas('mitra', function ($q3) use ($like) {
+                    $q3->where('nama', 'like', $like);
                 });
             });
         }
 
+        // Sorting: 'created' (pakai id) atau 'activity_date'
         $sortBy  = $request->input('sort_by', 'created');
         $sortDir = strtolower($request->input('sort_dir', 'desc'));
-        if (!in_array($sortDir, ['asc', 'desc'], true)) $sortDir = 'desc';
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
+        }
 
         if ($sortBy === 'activity_date') {
             $query->orderBy('activity_date', $sortDir)
-                ->orderBy('id', $sortDir);
+                ->orderBy('id',           $sortDir); // tie-breaker
         } else {
             $query->orderBy('id', $sortDir);
         }
 
+        // Pagination
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
-        if (!in_array($perPage, $allowed, true)) $perPage = 10;
+        if (!in_array($perPage, $allowed, true)) {
+            $perPage = 10;
+        }
 
         $activities = $query->paginate($perPage);
-        $items = collect($activities->items())->map->toArray()->all();
+        $items      = collect($activities->items())->map->toArray()->all();
+
+        // Vendor options khusus project (mirip yang dulu di ProjectController@show)
+        $vendorOptions = [];
+        if ($request->filled('project_id')) {
+            $vendorIds = Activity::where('project_id', $request->project_id)
+                ->where('jenis', 'Vendor')
+                ->whereNotNull('mitra_id')
+                ->pluck('mitra_id')
+                ->unique()
+                ->values();
+
+            $vendorOptions = Mitra::whereIn('id', $vendorIds)->get(['id', 'nama']);
+        }
 
         return response()->json([
             'message' => 'Activities retrieved successfully',
             'data' => $items,
             'pagination' => [
-                'total' => $activities->total(),
-                'per_page' => $activities->perPage(),
-                'current_page' => $activities->currentPage(),
-                'last_page' => $activities->lastPage(),
-                'from' => $activities->firstItem(),
-                'to' => $activities->lastItem(),
-            ]
+                'total'         => $activities->total(),
+                'per_page'      => $activities->perPage(),
+                'current_page'  => $activities->currentPage(),
+                'last_page'     => $activities->lastPage(),
+                'from'          => $activities->firstItem(),
+                'to'            => $activities->lastItem(),
+            ],
+            'vendor_options' => $vendorOptions,
         ]);
     }
 
