@@ -1,5 +1,5 @@
 <?php
- 
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
@@ -9,7 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BarangCertificateController;
 use App\Http\Controllers\CertificateController;
- 
+
 Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
     Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -21,32 +21,35 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
+
     // Project
     Route::get('projects/getFormDependencies', [ProjectController::class, 'getFormDependencies']);
+    Route::get('projects/customers', [ProjectController::class, 'getCustomersForProject']);
+    Route::patch('projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
+    Route::get('projects/certificate/list', [ProjectController::class, 'getCertProjects']);
+
+    // Resource projects
     Route::apiResource('projects', ProjectController::class);
-    Route::get('/projects/customers', [ProjectController::class, 'getCustomersForProject']);
-    Route::patch('/projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
-    Route::get('/projects/certificate/list', [ProjectController::class, 'getCertProjects']);
 
     // Mitra/Partner
     Route::apiResource('mitras', MitraController::class);
-    Route::get('/mitra/customers', [MitraController::class, 'getCustomers']);
-    Route::get('/mitra/vendors', [MitraController::class, 'getVendors']);
+    Route::get('mitra/customers', [MitraController::class, 'getCustomers']);
+    Route::get('mitra/vendors', [MitraController::class, 'getVendors']);
 
     // Activity
     Route::apiResource('activities', ActivityController::class);
-    Route::get('/activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
+    Route::get('activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
 
     // Barang Certificate
     Route::apiResource('barang-certificates', BarangCertificateController::class);
-    Route::get('/barang-certificate/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
+    Route::get('barang-certificate/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
 
     // Certificate
     Route::apiResource('certificates', CertificateController::class);
-    Route::get('/certificate/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
-    Route::get('/certificate/getBarangCertificatesByProject/{projectId}', [CertificateController::class, 'getBarangCertificatesByProject']);
+    Route::get('certificate/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
+    Route::get('certificate/getBarangCertificatesByProject/{projectId}', [CertificateController::class, 'getBarangCertificatesByProject']);
 
-    // Dashboard (misal hanya index)
+    // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);
 
     // Activity Logs
