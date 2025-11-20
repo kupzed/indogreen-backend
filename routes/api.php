@@ -22,6 +22,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 
 Route::group(['middleware' => 'auth:api'], function () {
     // Project
+    Route::get('projects/getFormDependencies', [ProjectController::class, 'getFormDependencies']);
     Route::apiResource('projects', ProjectController::class);
     Route::get('/projects/customers', [ProjectController::class, 'getCustomersForProject']);
     Route::patch('/projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
