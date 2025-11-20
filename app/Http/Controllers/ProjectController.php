@@ -117,6 +117,14 @@ class ProjectController extends Controller
         // Detail project + relasi dasar
         $project->load('mitra');
 
+        // List status project (untuk UI)
+        $projectStatusList = [
+            'Ongoing',
+            'Prospect',
+            'Complete',
+            'Cancel',
+        ];
+
         // List kategori project (opsional, kalau masih mau dipakai buat UI)
         $projectKategoriList = [
             'PLTS Hybrid','PLTS Ongrid','PLTS Offgrid',
@@ -127,6 +135,7 @@ class ProjectController extends Controller
             'message' => 'Project details retrieved successfully',
             'data' => [
                 'project' => new ProjectResource($project),
+                'project_status_list' => $projectStatusList,
                 'project_kategori_list' => $projectKategoriList,
             ],
         ]);
@@ -159,6 +168,30 @@ class ProjectController extends Controller
     {
         $project->delete();
         return response()->json(['message' => 'Project deleted successfully'], 204);
+    }
+
+    public function getFormDependencies()
+    {
+        $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
+
+        $projectStatusList = [
+            'Ongoing',
+            'Prospect',
+            'Complete',
+            'Cancel',
+        ];
+
+        $projectKategoriList = [
+            'PLTS Hybrid','PLTS Ongrid','PLTS Offgrid',
+            'PJUTS All In One','PJUTS Two In One','PJUTS Konvensional',
+        ];
+
+        return response()->json([
+            'message' => 'Project form dependencies retrieved successfully',
+            'customers' => $customers,
+            'project_status_list' => $projectStatusList,
+            'project_kategori_list' => $projectKategoriList,
+        ]);
     }
 
     // Endpoint tambahan untuk mendapatkan daftar customer/mitra
