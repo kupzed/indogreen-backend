@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BarangCertificateController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\RoleController;
 
 Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -18,6 +19,23 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/me', [AuthController::class, 'me'])->middleware('auth:api')->name('me');
     Route::put('/profile', [AuthController::class, 'updateProfile'])->middleware('auth:api')->name('profile.update');
     Route::put('/password', [AuthController::class, 'changePassword'])->middleware('auth:api')->name('password.update');
+
+    // ===== ROLE ENDPOINTS =====
+
+    // Role & permission user yang sedang login (boleh diakses semua user yang sudah login)
+    Route::get('/role/me', [RoleController::class, 'me'])
+        ->middleware('auth:api')
+        ->name('role.me');
+
+    // Daftar user untuk dikelola (super_admin & admin)
+    Route::get('/role/users', [RoleController::class, 'users'])
+        ->middleware(['auth:api', 'role:super_admin|admin'])
+        ->name('role.users');
+
+    // Update role & job user lain (super_admin & admin)
+    Route::put('/role', [RoleController::class, 'update'])
+        ->middleware(['auth:api', 'role:super_admin|admin'])
+        ->name('role.update');
 });
 
 Route::group(['middleware' => 'auth:api'], function () {

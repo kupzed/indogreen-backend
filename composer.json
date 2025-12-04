@@ -14,6 +14,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "php-open-source-saver/jwt-auth": "^2.3",
+        "spatie/laravel-permission": "^6.23",
         "tymon/jwt-auth": "^2.2"
     },
     "require-dev": {

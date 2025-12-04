@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             BarangCertificateSeeder::class,
             CertificateSeeder::class,
             ActivitySeeder::class,
+            RolePermissionSeeder::class,
         ]);
     }
 }

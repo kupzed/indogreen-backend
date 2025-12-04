@@ -7,40 +7,46 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 class Kernel extends HttpKernel
 {
     /**
-     * The application's global HTTP middleware stack.
-     *
-     * These middleware are run during every request to your application.
+     * Global middleware (dijalankan di setiap request).
      *
      * @var array<int, class-string|string>
      */
     protected $middleware = [
-        // ... existing code ...
+        // Middleware global yang kamu butuhkan
         \Illuminate\Http\Middleware\HandleCors::class,
+        // kalau kamu punya middleware global lain, boleh ditambahkan di sini
     ];
 
     /**
-     * The application's route middleware groups.
+     * Middleware groups.
      *
      * @var array<string, array<int, class-string|string>>
      */
     protected $middlewareGroups = [
         'web' => [
-            // Web middleware group
+            // Kalau app kamu API-only, bisa dibiarkan kosong
         ],
 
         'api' => [
-            // API middleware group
+            // Misal mau tambahkan throttle/bindings di sini nanti:
+            // \Illuminate\Routing\Middleware\ThrottleRequests::class . ':api',
+            // \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
     /**
-     * The application's route middleware.
-     *
-     * These middleware may be assigned to groups or used individually.
+     * Middleware aliases (Laravel 11 pakai ini untuk route).
      *
      * @var array<string, class-string|string>
      */
-    protected $routeMiddleware = [
-        // ... existing code ...
+    protected $middlewareAliases = [
+        // alias dasar yang dipakai di routes/api.php
+        'auth'     => \App\Http\Middleware\Authenticate::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+
+        // 🔹 Spatie permission middlewares (PERHATIKAN: `Middlewares` pakai S di belakang)
+        'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+        'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
     ];
-} 
+}
