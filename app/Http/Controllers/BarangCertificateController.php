@@ -119,4 +119,15 @@ class BarangCertificateController extends Controller
             'mitras' => $mitras
         ]);
     }
+
+    public function __construct()
+    {
+        // Read/list access
+        $this->middleware('permission:bc-view')->only(['index', 'show', 'getFormDependencies']);
+
+        // Create / update / delete
+        $this->middleware('permission:bc-create')->only(['store']);
+        $this->middleware('permission:bc-update')->only(['update']);
+        $this->middleware('permission:bc-delete')->only(['destroy']);
+    }
 }

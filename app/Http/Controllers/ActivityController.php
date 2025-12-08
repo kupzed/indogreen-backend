@@ -340,4 +340,18 @@ class ActivityController extends Controller
             'jenis_list'    => ['Internal', 'Customer', 'Vendor']
         ]);
     }
+
+    public function __construct()
+    {
+        // hak untuk melihat data activity (list, detail, form dependencies)
+        $this->middleware('permission:activity-view')->only([
+            'index', 'show', 'getFormDependencies'
+        ]);
+        // hak membuat activity
+        $this->middleware('permission:activity-create')->only(['store']);
+        // hak memperbarui activity
+        $this->middleware('permission:activity-update')->only(['update']);
+        // hak menghapus activity
+        $this->middleware('permission:activity-delete')->only(['destroy']);
+    }
 }

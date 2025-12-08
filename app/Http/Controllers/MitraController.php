@@ -202,4 +202,15 @@ class MitraController extends Controller
         Log::info('Fetched vendors:', ['count' => $vendors->count(), 'data' => $vendors->toArray()]);
         return response()->json(['data' => $vendors]);
     }
+
+    public function __construct()
+    {
+        // Protect read endpoints (index, show, dropdowns)
+        $this->middleware('permission:mitra-view')->only(['index', 'show', 'getCustomers', 'getVendors']);
+
+        // Protect create/update/delete
+        $this->middleware('permission:mitra-create')->only(['store']);
+        $this->middleware('permission:mitra-update')->only(['update']);
+        $this->middleware('permission:mitra-delete')->only(['destroy']);
+    }
 }

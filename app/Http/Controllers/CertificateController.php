@@ -283,4 +283,17 @@ class CertificateController extends Controller
             ], 404);
         }
     }
+
+    public function __construct()
+    {
+        // Read/list/show/form dependencies
+        $this->middleware('permission:certificate-view')->only([
+            'index', 'show', 'getFormDependencies', 'getBarangCertificatesByProject'
+        ]);
+
+        // Create / update / delete
+        $this->middleware('permission:certificate-create')->only(['store']);
+        $this->middleware('permission:certificate-update')->only(['update']);
+        $this->middleware('permission:certificate-delete')->only(['destroy']);
+    }
 }

@@ -289,4 +289,18 @@ class ProjectController extends Controller
             ]
         ]);
     }
+
+    public function __construct()
+    {
+        // hak untuk melihat data project (list, detail, form dependencies)
+        $this->middleware('permission:project-view')->only([
+            'index', 'show', 'getFormDependencies', 'getCustomersForProject', 'getCertProjects'
+        ]);
+        // hak membuat project
+        $this->middleware('permission:project-create')->only(['store']);
+        // hak memperbarui project (termasuk toggle sertifikat)
+        $this->middleware('permission:project-update')->only(['update', 'toggleCertProject']);
+        // hak menghapus project
+        $this->middleware('permission:project-delete')->only(['destroy']);
+    }
 }
