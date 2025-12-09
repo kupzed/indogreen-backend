@@ -175,4 +175,32 @@ class RoleController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Mengambil konfigurasi module & permission actions untuk frontend.
+     * GET /auth/role/config
+     */
+    public function config()
+    {
+        // Sesuaikan label ini dengan yang sebelumnya ada di frontend Svelte
+        $modules = [
+            ['key' => 'project',     'label' => 'Project'],
+            ['key' => 'activity',    'label' => 'Activity'],
+            ['key' => 'mitra',       'label' => 'Mitra'],
+            ['key' => 'bc',          'label' => 'Barang Sertifikat'],
+            ['key' => 'certificate', 'label' => 'Sertifikat'],
+        ];
+
+        $actions = [
+            ['key' => 'view',   'label' => 'View'],
+            ['key' => 'create', 'label' => 'Create'],
+            ['key' => 'update', 'label' => 'Update'],
+            ['key' => 'delete', 'label' => 'Delete'],
+        ];
+
+        return response()->json([
+            'modules' => $modules,
+            'actions' => $actions,
+        ]);
+    }
 }

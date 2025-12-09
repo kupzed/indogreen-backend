@@ -36,6 +36,11 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::put('/role', [RoleController::class, 'update'])
         ->middleware(['auth:api', 'role:super_admin|admin'])
         ->name('role.update');
+
+    // Config role & permission (modul & label)
+    Route::get('/role/config', [RoleController::class, 'config'])
+        ->middleware('auth:api')
+        ->name('role.config');
 });
 
 Route::group(['middleware' => 'auth:api'], function () {
