@@ -52,11 +52,18 @@ class CertificateController extends Controller
         }
 
         $perPage = $request->integer('per_page', 10);
-        $allowed = [10, 25, 50, 100];
-        if (!in_array($perPage, $allowed, true)) $perPage = 10;
-
         $certificates = $query->paginate($perPage);
         $items = collect($certificates->items())->map->toArray()->all();
+
+        $barangOptions = [];
+        if ($request->filled('project_id')) {
+            $project = Project::find($request->project_id);
+            if ($project) {
+                $barangOptions = BarangCertificate::where('mitra_id', $project->mitra_id)
+                    ->select('id', 'name', 'no_seri')
+                    ->get();
+            }
+        }
 
         return response()->json([
             'message' => 'Certificates retrieved successfully',
@@ -68,7 +75,8 @@ class CertificateController extends Controller
                 'last_page' => $certificates->lastPage(),
                 'from' => $certificates->firstItem(),
                 'to' => $certificates->lastItem(),
-            ]
+            ],
+            'barang_options' => $barangOptions,
         ]);
     }
 
@@ -257,38 +265,20 @@ class CertificateController extends Controller
     {
         $projects = Project::select('id', 'name')->get();
         $barangCertificates = BarangCertificate::select('id', 'name', 'no_seri')->get();
+        $statuses = ['Belum', 'Tidak Aktif', 'Aktif'];
 
         return response()->json([
             'projects' => $projects,
-            'barang_certificates' => $barangCertificates
+            'barang_certificates' => $barangCertificates,
+            'statuses' => $statuses
         ]);
-    }
-
-    public function getBarangCertificatesByProject($projectId)
-    {
-        try {
-            $project = Project::findOrFail($projectId);
-            $barangCertificates = BarangCertificate::where('mitra_id', $project->mitra_id)
-                ->select('id', 'name', 'no_seri')
-                ->get();
-
-            return response()->json([
-                'message' => 'Barang certificates retrieved successfully',
-                'data' => $barangCertificates
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Project not found',
-                'data' => []
-            ], 404);
-        }
     }
 
     public function __construct()
     {
         // Read/list/show/form dependencies
         $this->middleware('permission:certificate-view')->only([
-            'index', 'show', 'getFormDependencies', 'getBarangCertificatesByProject'
+            'index', 'show', 'getFormDependencies'
         ]);
 
         // Create / update / delete

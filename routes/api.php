@@ -70,7 +70,6 @@ Route::group(['middleware' => 'auth:api'], function () {
     // Certificate
     Route::apiResource('certificates', CertificateController::class);
     Route::get('certificate/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
-    Route::get('certificate/getBarangCertificatesByProject/{projectId}', [CertificateController::class, 'getBarangCertificatesByProject']);
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);
