@@ -32,6 +32,8 @@ return new class extends Migration
                 'Kontrak',
                 'Berita Acara',
                 'Receive Item',
+                'Delivery Order',
+                'Legalitas',
                 'Other',
             ])->default('Expense Report');
             $table->date('activity_date');

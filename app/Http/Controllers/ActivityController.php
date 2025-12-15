@@ -127,7 +127,7 @@ class ActivityController extends Controller
             'kategori'      => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-                'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
+                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
             ])],
             'activity_date' => 'required|date',
             'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
@@ -205,7 +205,7 @@ class ActivityController extends Controller
             'kategori'      => ['required', Rule::in([
                 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-                'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
+                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
             ])],
             'activity_date' => 'required|date',
             'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
@@ -335,7 +335,7 @@ class ActivityController extends Controller
             'kategori_list' => [
                 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
                 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-                'Kontrak', 'Berita Acara', 'Receive Item', 'Other',
+                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
             ],
             'jenis_list'    => ['Internal', 'Customer', 'Vendor']
         ]);
