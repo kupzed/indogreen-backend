@@ -10,6 +10,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BarangCertificateController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\FinanceController;
 
 Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/register', [AuthController::class, 'register'])->name('register');
@@ -73,6 +74,9 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);
+
+    // Finance Report
+    Route::get('finance/monthly-report', [FinanceController::class, 'monthlyReport']);
 
     // Activity Logs
     Route::get('activity-logs', [ActivityLogController::class, 'index']);

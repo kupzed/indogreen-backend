@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->text('short_desc')->nullable();
             $table->text('description');
+            $table->decimal('value', 15, 2)->default(0);
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
             $table->enum('kategori', [
                 'Expense Report',

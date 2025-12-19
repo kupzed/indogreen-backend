@@ -18,6 +18,7 @@ class Activity extends Model
         'name',
         'short_desc',
         'description',
+        'value',
         'project_id',
         'kategori',
         'activity_date',
@@ -30,6 +31,7 @@ class Activity extends Model
 
     protected $casts = [
         'activity_date' => 'date',
+        'value'         => 'decimal:2',
     ];
 
     protected $appends = ['attachments'];
