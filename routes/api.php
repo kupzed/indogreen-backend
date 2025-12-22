@@ -77,6 +77,7 @@ Route::group(['middleware' => 'auth:api'], function () {
 
     // Finance Report
     Route::get('finance/monthly-report', [FinanceController::class, 'monthlyReport']);
+    Route::patch('finance/{activity}/value', [FinanceController::class, 'updateValue']);
 
     // Activity Logs
     Route::get('activity-logs', [ActivityLogController::class, 'index']);

@@ -33,7 +33,11 @@ class FinanceController extends Controller
         ];
 
         // 3. Query Data
-        $activities = Activity::with('project:id,name') // Eager load project agar query ringan
+        $activities = Activity::with([
+                'project:id,name',
+                'mitra:id,nama',
+                'attachments',
+            ]) // Eager load relasi penting
             ->whereYear('activity_date', $year)
             ->whereMonth('activity_date', $month)
             ->whereIn('kategori', $financeCategories) // Filter hanya kategori di atas
@@ -44,13 +48,13 @@ class FinanceController extends Controller
         // Kita format agar sesuai kebutuhan frontend/laporan
         $reportData = $activities->map(function ($activity) {
             return [
-                'activity_date' => $activity->activity_date->format('Y-m-d'), // Format tanggal
-                'kategori'      => $activity->kategori,
-                'activity_name' => $activity->name,
-                'project_name'  => $activity->project ? $activity->project->name : '-', // Handle jika project null
-                'value'         => $activity->value,
-                // Optional: Format currency string untuk tampilan langsung
+                'activity_date'   => $activity->activity_date->format('Y-m-d'),
+                'kategori'        => $activity->kategori,
+                'activity_name'   => $activity->name,
+                'project_name'    => $activity->project ? $activity->project->name : '-',
+                'value'           => $activity->value,
                 'value_formatted' => 'Rp ' . number_format($activity->value, 0, ',', '.'),
+                'activity'        => $activity->loadMissing(['project', 'mitra', 'attachments'])->toArray(),
             ];
         });
 
@@ -65,6 +69,29 @@ class FinanceController extends Controller
                 'total_value' => $totalValue,
             ],
             'data' => $reportData,
+        ]);
+    }
+
+    /**
+     * Update hanya kolom value activity terkait laporan keuangan.
+     */
+    public function updateValue(Request $request, Activity $activity)
+    {
+        $validated = $request->validate([
+            'value' => 'required|numeric|min:0',
+        ]);
+
+        $activity->update(['value' => $validated['value']]);
+
+        $activity->load(['project:id,name', 'mitra:id,nama', 'attachments']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Nilai activity berhasil diperbarui',
+            'meta' => [
+                'value_formatted' => 'Rp ' . number_format($activity->value, 0, ',', '.'),
+            ],
+            'data' => $activity,
         ]);
     }
 }
