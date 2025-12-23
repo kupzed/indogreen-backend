@@ -18,12 +18,18 @@ class RolePermissionSeeder extends Seeder
         $guard = config('auth.defaults.guard', 'api');
 
         // Modul & aksi yang tersedia di aplikasi
-        $modules = ['project', 'activity', 'mitra', 'bc', 'certificate'];
-        $actions = ['view', 'create', 'update', 'delete'];
+        $modules = [
+            'project'     => ['view', 'create', 'update', 'delete'],
+            'activity'    => ['view', 'create', 'update', 'delete'],
+            'mitra'       => ['view', 'create', 'update', 'delete'],
+            'bc'          => ['view', 'create', 'update', 'delete'],
+            'certificate' => ['view', 'create', 'update', 'delete'],
+            'finance'     => ['view', 'update'],
+        ];
 
         $permissions = [];
 
-        foreach ($modules as $module) {
+        foreach ($modules as $module => $actions) {
             foreach ($actions as $action) {
                 $name = "{$module}-{$action}";
                 $permissions[] = $name;
@@ -35,17 +41,24 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
+        $permissions = array_values(array_unique($permissions));
+
+        $adminPermissions = array_filter($permissions, function ($permission) {
+            return ! str_ends_with($permission, '-delete');
+        });
+
         /**
          * Mapping role → permission.
          *
-         * super_admin & admin punya semua permission.
+         * super_admin punya semua permission.
+         * admin: akses penuh kecuali aksi delete.
          * staff & user TIDAK dapat permission dari role,
          * supaya permission mereka bisa diatur fleksibel per user
          * via endpoint /auth/role (user-level permission).
          */
         $rolePermissions = [
             'super_admin' => $permissions,
-            'admin'       => $permissions,
+            'admin'       => array_values($adminPermissions),
             'staff'       => [], // fleksibel per user
             'user'        => [], // fleksibel per user
         ];

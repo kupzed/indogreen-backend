@@ -7,9 +7,17 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use App\Services\ActivityLogService;
 
 class RoleController extends Controller
 {
+    protected ActivityLogService $activityLogService;
+
+    public function __construct(ActivityLogService $activityLogService)
+    {
+        $this->activityLogService = $activityLogService;
+    }
+
     /**
      * Role & permissions user yang sedang login.
      * GET /auth/role/me
@@ -141,6 +149,11 @@ class RoleController extends Controller
             'guard_name' => $guard,
         ]);
 
+        $previousSnapshot = [
+            'roles' => $targetUser->getRoleNames()->toArray(),
+            'permissions' => $targetUser->getAllPermissions()->pluck('name')->toArray(),
+        ];
+
         $targetUser->syncRoles([$role->name]);
 
         $permissionNames = [];
@@ -163,6 +176,21 @@ class RoleController extends Controller
         } else {
             $targetUser->syncPermissions([]);
         }
+
+        $currentSnapshot = [
+            'roles' => $targetUser->getRoleNames()->toArray(),
+            'permissions' => $targetUser->getAllPermissions()->pluck('name')->toArray(),
+        ];
+
+        $this->activityLogService->log(
+            'role_assignment',
+            User::class,
+            $targetUser->id,
+            $targetUser->name,
+            sprintf('Role & permission user diperbarui oleh %s', $actor->name),
+            $previousSnapshot,
+            $currentSnapshot
+        );
 
         return response()->json([
             'message' => 'User role & permissions updated successfully',
@@ -189,6 +217,7 @@ class RoleController extends Controller
             ['key' => 'mitra',       'label' => 'Mitra'],
             ['key' => 'bc',          'label' => 'Barang Sertifikat'],
             ['key' => 'certificate', 'label' => 'Sertifikat'],
+            ['key' => 'finance',     'label' => 'Finance'],
         ];
 
         $actions = [

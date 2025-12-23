@@ -3,11 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class FinanceController extends Controller
 {
+    protected ActivityLogService $activityLogService;
+
+    public function __construct(ActivityLogService $activityLogService)
+    {
+        $this->activityLogService = $activityLogService;
+        $this->middleware('permission:finance-view')->only('monthlyReport');
+        $this->middleware('permission:finance-update')->only('updateValue');
+    }
+
     /**
      * Menampilkan laporan keuangan bulanan.
      */
@@ -81,9 +91,22 @@ class FinanceController extends Controller
             'value' => 'required|numeric|min:0',
         ]);
 
+        $previousValue = $activity->value;
+
         $activity->update(['value' => $validated['value']]);
 
         $activity->load(['project:id,name', 'mitra:id,nama', 'attachments']);
+
+        // [TETAP ADA] Log hanya tercatat saat melakukan update value
+        $this->activityLogService->log(
+            'finance_value_update',
+            'finance_activity_value',
+            $activity->id,
+            $activity->name,
+            sprintf('Memperbarui nilai finance activity #%d', $activity->id),
+            ['value' => $previousValue],
+            ['value' => $activity->value]
+        );
 
         return response()->json([
             'status' => 'success',
