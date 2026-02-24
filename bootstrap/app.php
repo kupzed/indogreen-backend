@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\PermissionMiddleware;
@@ -31,5 +32,14 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => $e->getMessage(),
                 ], 401);
             }
+        });
+
+        $exceptions->render(function (ThrottleRequestsException $e, Request $request) {
+            $retryAfter = $e->getHeaders()['Retry-After'] ?? $e->getHeaders()['retry-after'] ?? null;
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terlalu banyak permintaan. Silakan coba lagi dalam ' . ($retryAfter ?? '?') . ' detik.',
+            ], 429, $e->getHeaders());
         });
     })->create();

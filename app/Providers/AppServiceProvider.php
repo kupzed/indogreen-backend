@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +27,18 @@ class AppServiceProvider extends ServiceProvider
             if ($user && $user->hasRole('super_admin')) {
                 return true;
             }
+        });
+
+        // Rate limiter untuk endpoint API umum (60 req/menit)
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(30)->by(
+                $request->user()?->id ?: $request->ip()
+            );
+        });
+
+        // Rate limiter untuk auth (login/register) – proteksi brute force (5 req/menit)
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
         });
     }
 }
