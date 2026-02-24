@@ -41,7 +41,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareAliases = [
         // alias dasar yang dipakai di routes/api.php
-        'auth'     => \App\Http\Middleware\Authenticate::class,
+        'auth'     => \Illuminate\Auth\Middleware\Authenticate::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
 
         // 🔹 Spatie permission middlewares (PERHATIKAN: `Middlewares` pakai S di belakang)
