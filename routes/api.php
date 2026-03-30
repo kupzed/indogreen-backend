@@ -51,6 +51,7 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
     Route::get('projects/customers', [ProjectController::class, 'getCustomersForProject']);
     Route::patch('projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
     Route::get('projects/certificate/list', [ProjectController::class, 'getCertProjects']);
+    Route::get('projects/export/excel', [ProjectController::class, 'exportExcel']);
 
     // Resource projects
     Route::apiResource('projects', ProjectController::class);

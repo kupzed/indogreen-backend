@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\Mitra;
+use App\Exports\ProjectExport;
 use App\Http\Resources\ProjectResource;
 use App\Http\Requests\ProjectRequest;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProjectController extends Controller
 {
@@ -290,11 +292,76 @@ class ProjectController extends Controller
         ]);
     }
 
+    /**
+     * Export projects to Excel based on active filters.
+     * Mirrors the same filter logic as the index method.
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function exportExcel(Request $request)
+    {
+        $query = Project::with('mitra');
+
+        // Filter status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        // Filter kategori
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->kategori);
+        }
+        // Filter customer (mitra_id)
+        if ($request->filled('customer_id')) {
+            $query->where('mitra_id', $request->customer_id);
+        }
+        // Filter Date Range
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('start_date', [$request->date_from, $request->date_to]);
+        } elseif ($request->filled('date_from')) {
+            $query->where('start_date', '>=', $request->date_from);
+        } elseif ($request->filled('date_to')) {
+            $query->where('start_date', '<=', $request->date_to);
+        }
+        // Search
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%")
+                  ->orWhere('lokasi', 'like', "%$search%")
+                  ->orWhere('no_po', 'like', "%$search%")
+                  ->orWhere('no_so', 'like', "%$search%")
+                  ->orWhereHas('mitra', function($q2) use ($search) {
+                      $q2->where('nama', 'like', "%$search%");
+                  });
+            });
+        }
+        // Filter is_cert_projects
+        if ($request->has('is_cert_projects')) {
+            $query->where('is_cert_projects', $request->boolean('is_cert_projects'));
+        }
+
+        // Sorting
+        $sortBy  = $request->input('sort_by', 'created');
+        $sortDir = strtolower($request->input('sort_dir', 'desc'));
+        if (!in_array($sortDir, ['asc', 'desc'], true)) $sortDir = 'desc';
+
+        if ($sortBy === 'start_date') {
+            $query->orderBy('start_date', $sortDir)->orderBy('id', $sortDir);
+        } else {
+            $query->orderBy('id', $sortDir);
+        }
+
+        $fileName = 'data-project-' . now()->format('Ymd-His') . '.xlsx';
+
+        return Excel::download(new ProjectExport($query), $fileName);
+    }
+
     public function __construct()
     {
         // hak untuk melihat data project (list, detail, form dependencies)
         $this->middleware('permission:project-view')->only([
-            'index', 'show', 'getFormDependencies', 'getCustomersForProject', 'getCertProjects'
+            'index', 'show', 'getFormDependencies', 'getCustomersForProject', 'getCertProjects', 'exportExcel'
         ]);
         // hak membuat project
         $this->middleware('permission:project-create')->only(['store']);
