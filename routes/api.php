@@ -61,6 +61,7 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
     Route::get('mitra/vendors', [MitraController::class, 'getVendors']);
 
     // Activity
+    Route::post('activities/extract-document', [ActivityController::class, 'extractDocument']);
     Route::apiResource('activities', ActivityController::class);
     Route::get('activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
 

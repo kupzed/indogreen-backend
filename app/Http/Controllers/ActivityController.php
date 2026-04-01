@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\ActivityAttachment;
 use App\Models\Project;
 use App\Models\Mitra;
+use App\Services\AIDocumentExtractionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -87,7 +88,7 @@ class ActivityController extends Controller
         }
 
         $activities = $query->paginate($perPage);
-        $items      = collect($activities->items())->map->toArray()->all();
+        $items      = collect($activities->items())->map(fn ($item) => $item->toArray())->toArray();
 
         // Vendor options khusus project (mirip yang dulu di ProjectController@show)
         $vendorOptions = [];
@@ -243,10 +244,12 @@ class ActivityController extends Controller
             // 1) Hapus lampiran lama yang dipilih
             $removedIds = $request->input('removed_existing_ids', []);
             if (!empty($removedIds)) {
+                /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\ActivityAttachment> $toDelete */
                 $toDelete = ActivityAttachment::whereIn('id', $removedIds)
                     ->where('activity_id', $activity->id)
                     ->get();
 
+                /** @var \App\Models\ActivityAttachment $att */
                 foreach ($toDelete as $att) {
                     if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
                         Storage::disk('public')->delete($att->file_path);
@@ -343,6 +346,47 @@ class ActivityController extends Controller
         ]);
     }
 
+    /**
+     * POST /api/activities/extract-document
+     * Accepts a document or image file, sends it to AI, and returns
+     * extracted structured data WITHOUT saving anything to the database.
+     */
+    public function extractDocument(Request $request, AIDocumentExtractionService $aiService)
+    {
+        $request->validate([
+            'document' => [
+                'file',
+                'max:10240', // 10 MB
+                'mimes:jpeg,jpg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt',
+            ],
+        ]);
+
+        try {
+            $file   = $request->file('document');
+            $result = $aiService->extract($file);
+
+            return response()->json([
+                'message' => 'Document extracted successfully',
+                'data'    => $result,
+            ]);
+        } catch (\RuntimeException $e) {
+            Log::error('AI Document Extraction failed', [
+                'error' => $e->getMessage(),
+                'file'  => $request->file('document')?->getClientOriginalName(),
+            ]);
+
+            return response()->json([
+                'message' => 'Ekstraksi dokumen gagal: ' . $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error during AI extraction', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'message' => 'Terjadi kesalahan tidak terduga. Silakan coba lagi.',
+            ], 500);
+        }
+    }
+
     public function __construct()
     {
         // hak untuk melihat data activity (list, detail, form dependencies)
@@ -350,7 +394,7 @@ class ActivityController extends Controller
             'index', 'show', 'getFormDependencies'
         ]);
         // hak membuat activity
-        $this->middleware('permission:activity-create')->only(['store']);
+        $this->middleware('permission:activity-create')->only(['store', 'extractDocument']);
         // hak memperbarui activity
         $this->middleware('permission:activity-update')->only(['update']);
         // hak menghapus activity

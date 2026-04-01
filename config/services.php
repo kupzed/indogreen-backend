@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'ai' => [
+        'base_url' => env('AI_BASE_URL', 'https://api.x.ai/v1'),
+        'api_key'  => env('AI_API_KEY', ''),
+        'model'    => env('AI_MODEL', 'grok-4-1-fast-non-reasoning'),
+    ],
+
 ];
