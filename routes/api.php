@@ -47,10 +47,7 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
 
     // Project
-    Route::get('projects/getFormDependencies', [ProjectController::class, 'getFormDependencies']);
-    Route::get('projects/customers', [ProjectController::class, 'getCustomersForProject']);
     Route::patch('projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
-    Route::get('projects/certificate/list', [ProjectController::class, 'getCertProjects']);
 
     // Resource projects
     Route::apiResource('projects', ProjectController::class);
@@ -62,7 +59,6 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
 
     // Activity
     Route::apiResource('activities', ActivityController::class);
-    Route::get('activity/getFormDependencies', [ActivityController::class, 'getFormDependencies']);
 
     // Barang Certificate
     Route::apiResource('barang-certificates', BarangCertificateController::class);
@@ -70,7 +66,6 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
 
     // Certificate
     Route::apiResource('certificates', CertificateController::class);
-    Route::get('certificate/getFormDependencies', [CertificateController::class, 'getFormDependencies']);
 
     // Dashboard
     Route::get('dashboard', [DashboardController::class, 'index']);
