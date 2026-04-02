@@ -103,15 +103,6 @@ class ProjectController extends Controller
      * @param  \App\Models\Project  $project
      * @return \Illuminate\Http\JsonResponse
      */
-    public function toggleCertProject(Project $project)
-    {
-        $project = $this->projectService->toggleCertProject($project);
-
-        return response()->json([
-            'message' => 'Certificate project status toggled successfully',
-            'data' => new ProjectResource($project),
-        ]);
-    }
 
     private function getFormDependenciesArray(): array
     {

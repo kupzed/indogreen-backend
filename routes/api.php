@@ -47,9 +47,6 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
 
     // Project
-    Route::patch('projects/{project}/toggle-cert', [ProjectController::class, 'toggleCertProject']);
-
-    // Resource projects
     Route::apiResource('projects', ProjectController::class);
 
     // Mitra/Partner

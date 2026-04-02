@@ -42,18 +42,5 @@ class ProjectService
         $project->delete();
     }
 
-    /**
-     * Toggle the formal certificate status of a project
-     *
-     * @param Project $project
-     * @return Project
-     */
-    public function toggleCertProject(Project $project): Project
-    {
-        $project->update([
-            'is_cert_projects' => !$project->is_cert_projects
-        ]);
 
-        return $project;
-    }
 }
