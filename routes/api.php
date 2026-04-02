@@ -51,15 +51,12 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
 
     // Mitra/Partner
     Route::apiResource('mitras', MitraController::class);
-    Route::get('mitra/customers', [MitraController::class, 'getCustomers']);
-    Route::get('mitra/vendors', [MitraController::class, 'getVendors']);
 
     // Activity
     Route::apiResource('activities', ActivityController::class);
 
     // Barang Certificate
     Route::apiResource('barang-certificates', BarangCertificateController::class);
-    Route::get('barang-certificate/getFormDependencies', [BarangCertificateController::class, 'getFormDependencies']);
 
     // Certificate
     Route::apiResource('certificates', CertificateController::class);
