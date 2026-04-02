@@ -146,6 +146,7 @@ class ActivityService
             ->where('activity_id', $activityId)
             ->get();
 
+        /** @var ActivityAttachment $att */
         foreach ($toDelete as $att) {
             if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
                 Storage::disk('public')->delete($att->file_path);

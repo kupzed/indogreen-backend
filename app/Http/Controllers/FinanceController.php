@@ -58,14 +58,14 @@ class FinanceController extends Controller
 
         // 4. Formatting Data (Mapping)
         // Kita format agar sesuai kebutuhan frontend/laporan
-        $reportData = $activities->map(function ($activity) {
+        $reportData = $activities->map(function (Activity $activity) {
             return [
-                'activity_date'   => $activity->activity_date->format('Y-m-d'),
+                'activity_date'   => optional($activity->activity_date)->format('Y-m-d'),
                 'kategori'        => $activity->kategori,
                 'activity_name'   => $activity->name,
                 'project_name'    => $activity->project ? $activity->project->name : '-',
                 'value'           => $activity->value,
-                'value_formatted' => 'Rp ' . number_format($activity->value, 0, ',', '.'),
+                'value_formatted' => 'Rp ' . number_format((float) $activity->value, 0, ',', '.'),
                 'activity'        => $activity->loadMissing(['project', 'mitra', 'attachments'])->toArray(),
             ];
         });
@@ -128,14 +128,14 @@ class FinanceController extends Controller
             ->orderBy('activity_date', 'asc')
             ->get();
 
-        $reportData = $activities->map(function ($activity) {
+        $reportData = $activities->map(function (Activity $activity) {
             return [
                 'activity_date'   => optional($activity->activity_date)->format('Y-m-d'),
                 'kategori'        => $activity->kategori,
                 'activity_name'   => $activity->name,
                 'project_name'    => $activity->project ? $activity->project->name : '-',
                 'value'           => $activity->value,
-                'value_formatted' => 'Rp ' . number_format($activity->value, 0, ',', '.'),
+                'value_formatted' => 'Rp ' . number_format((float) $activity->value, 0, ',', '.'),
                 'activity'        => $activity->loadMissing(['project', 'mitra', 'attachments'])->toArray(),
             ];
         });
@@ -188,7 +188,7 @@ class FinanceController extends Controller
             'status' => 'success',
             'message' => 'Nilai activity berhasil diperbarui',
             'meta' => [
-                'value_formatted' => 'Rp ' . number_format($activity->value, 0, ',', '.'),
+                'value_formatted' => 'Rp ' . number_format((float) $activity->value, 0, ',', '.'),
             ],
             'data' => $activity,
         ]);

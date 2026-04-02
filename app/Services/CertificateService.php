@@ -48,6 +48,7 @@ class CertificateService
                     ->where('certificate_id', $certificate->id)
                     ->get();
 
+                /** @var CertificateAttachment $att */
                 foreach ($toDelete as $att) {
                     if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
                         Storage::disk('public')->delete($att->file_path);
