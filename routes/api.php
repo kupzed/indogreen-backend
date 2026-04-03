@@ -65,9 +65,7 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
     Route::get('dashboard', [DashboardController::class, 'index']);
 
     // Finance Report
-    Route::get('finance/monthly-report', [FinanceController::class, 'monthlyReport']);
-    Route::get('finance/project-report', [FinanceController::class, 'projectReport']);
-    Route::patch('finance/{activity}/value', [FinanceController::class, 'updateValue']);
+    Route::apiResource('finance', FinanceController::class)->only(['index', 'update']);
 
     // Activity Logs
     Route::get('activity-logs', [ActivityLogController::class, 'index']);
