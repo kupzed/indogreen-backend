@@ -52,6 +52,37 @@ class Certificate extends Model
         return $this->name ?? 'Certificate #' . $this->id;
     }
 
+    public function scopeFilter($query, array $filters)
+    {
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (!empty($filters['project_id'])) {
+            $query->where('project_id', $filters['project_id']);
+        }
+        if (!empty($filters['barang_certificate_id'])) {
+            $query->where('barang_certificate_id', $filters['barang_certificate_id']);
+        }
+
+        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+            $query->whereBetween('date_of_issue', [$filters['date_from'], $filters['date_to']]);
+        } elseif (!empty($filters['date_from'])) {
+            $query->where('date_of_issue', '>=', $filters['date_from']);
+        } elseif (!empty($filters['date_to'])) {
+            $query->where('date_of_issue', '<=', $filters['date_to']);
+        }
+
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('no_certificate', 'like', "%$search%")
+                  ->orWhereHas('project', fn($q2) => $q2->where('name', 'like', "%$search%"))
+                  ->orWhereHas('barangCertificate', fn($q2) => $q2->where('name', 'like', "%$search%"));
+            });
+        }
+    }
+
     protected function formatBytes(?int $bytes): ?string
     {
         if ($bytes === null) return null;

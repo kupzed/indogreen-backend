@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Certificate;
-use App\Models\CertificateAttachment;
 use App\Models\Project;
 use App\Models\BarangCertificate;
+use App\Http\Resources\CertificateResource;
+use App\Http\Requests\StoreCertificateRequest;
+use App\Http\Requests\UpdateCertificateRequest;
+use App\Services\CertificateService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class CertificateController extends Controller
 {
@@ -17,27 +17,9 @@ class CertificateController extends Controller
     {
         $query = Certificate::with(['project', 'barangCertificate', 'attachments']);
 
-        if ($request->filled('status'))                $query->where('status', $request->status);
-        if ($request->filled('project_id'))            $query->where('project_id', $request->project_id);
-        if ($request->filled('barang_certificate_id')) $query->where('barang_certificate_id', $request->barang_certificate_id);
-
-        if ($request->filled('date_from') && $request->filled('date_to')) {
-            $query->whereBetween('date_of_issue', [$request->date_from, $request->date_to]);
-        } elseif ($request->filled('date_from')) {
-            $query->where('date_of_issue', '>=', $request->date_from);
-        } elseif ($request->filled('date_to')) {
-            $query->where('date_of_issue', '<=', $request->date_to);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%")
-                ->orWhere('no_certificate', 'like', "%$search%")
-                ->orWhereHas('project', fn($q2) => $q2->where('name', 'like', "%$search%"))
-                ->orWhereHas('barangCertificate', fn($q2) => $q2->where('name', 'like', "%$search%"));
-            });
-        }
+        $query->filter($request->only([
+            'status', 'project_id', 'barang_certificate_id', 'date_from', 'date_to', 'search'
+        ]));
 
         $sortBy  = $request->input('sort_by', 'created');
         $sortDir = strtolower($request->input('sort_dir', 'desc'));
@@ -53,7 +35,70 @@ class CertificateController extends Controller
 
         $perPage = $request->integer('per_page', 10);
         $certificates = $query->paginate($perPage);
-        $items = collect($certificates->items())->map->toArray()->all();
+
+        return CertificateResource::collection($certificates)->additional([
+            'message' => 'Certificates retrieved successfully',
+            'form_dependencies' => $this->getFormDependenciesData($request),
+        ]);
+    }
+
+    public function store(StoreCertificateRequest $request)
+    {
+        $certificate = $this->certificateService->createCertificate(
+            $request->validated(),
+            $request->file('attachments', []),
+            $request->input('attachment_names', []),
+            $request->input('attachment_descriptions', [])
+        );
+
+        return (new CertificateResource($certificate))->additional([
+            'message' => 'Certificate created successfully'
+        ]);
+    }
+
+    public function show(Certificate $certificate)
+    {
+        $certificate->load(['project', 'barangCertificate', 'attachments']);
+        
+        return (new CertificateResource($certificate))->additional([
+            'message' => 'Certificate retrieved successfully',
+            'form_dependencies' => $this->getFormDependenciesData(request())
+        ]);
+    }
+
+    public function update(UpdateCertificateRequest $request, Certificate $certificate)
+    {
+        $updatedCertificate = $this->certificateService->updateCertificate(
+            $certificate,
+            $request->validated(),
+            $request->input('removed_existing_ids', []),
+            $request->input('existing_attachment_ids', []),
+            $request->input('existing_attachment_names', []),
+            $request->input('existing_attachment_descriptions', []),
+            $request->file('attachments', []),
+            $request->input('attachment_names', []),
+            $request->input('attachment_descriptions', [])
+        );
+
+        return (new CertificateResource($updatedCertificate))->additional([
+            'message' => 'Certificate updated successfully'
+        ]);
+    }
+
+    public function destroy(Certificate $certificate)
+    {
+        $this->certificateService->deleteCertificate($certificate);
+
+        return response()->json([
+            'message' => 'Certificate deleted successfully'
+        ]);
+    }
+
+    private function getFormDependenciesData(Request $request): array
+    {
+        $projects = Project::select('id', 'name')->get();
+        $barangCertificates = BarangCertificate::select('id', 'name', 'no_seri')->get();
+        $statuses = ['Belum', 'Tidak Aktif', 'Aktif'];
 
         $barangOptions = [];
         if ($request->filled('project_id')) {
@@ -65,220 +110,19 @@ class CertificateController extends Controller
             }
         }
 
-        return response()->json([
-            'message' => 'Certificates retrieved successfully',
-            'data' => $items,
-            'pagination' => [
-                'total' => $certificates->total(),
-                'per_page' => $certificates->perPage(),
-                'current_page' => $certificates->currentPage(),
-                'last_page' => $certificates->lastPage(),
-                'from' => $certificates->firstItem(),
-                'to' => $certificates->lastItem(),
-            ],
-            'barang_options' => $barangOptions,
-        ]);
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'no_certificate'        => 'required|string|max:30|unique:certificates,no_certificate',
-            'project_id'            => 'required|exists:projects,id',
-            'barang_certificate_id' => 'required|exists:barang_certificates,id',
-            'status'                => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
-            'date_of_issue'         => 'nullable|date',
-            'date_of_expired'       => 'nullable|date|after:date_of_issue',
-
-            // Multi-file
-            'attachments.*'             => ['file', 'max:10240'],
-            'attachment_names'          => ['array'],
-            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
-            'attachment_descriptions'   => ['array'],
-            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        if (($validated['date_of_issue'] ?? '') === '')   $validated['date_of_issue'] = null;
-        if (($validated['date_of_expired'] ?? '') === '') $validated['date_of_expired'] = null;
-
-        return DB::transaction(function () use ($request, $validated) {
-            $certificate = Certificate::create($validated);
-
-            // Simpan lampiran baru
-            $files = $request->file('attachments', []);
-            $names = $request->input('attachment_names', []);
-            $descs = $request->input('attachment_descriptions', []);
-
-            foreach ($files as $i => $file) {
-                if (!$file) continue;
-
-                $path = $file->store('attachments/certificates/' . $certificate->id, 'public');
-                $displayName = $names[$i] ?? $file->getClientOriginalName();
-                $desc = $descs[$i] ?? null;
-
-                $certificate->attachments()->create([
-                    'name'        => $displayName,
-                    'description' => $desc,
-                    'file_path'   => $path,
-                    'mime'        => $file->getClientMimeType(),
-                    'size'        => $file->getSize(),
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Certificate created successfully',
-                'data' => $certificate->load(['project', 'barangCertificate', 'attachments'])->toArray()
-            ], 201);
-        });
-    }
-
-    public function show(Certificate $certificate)
-    {
-        return response()->json([
-            'message' => 'Certificate retrieved successfully',
-            'data' => $certificate->load(['project', 'barangCertificate', 'attachments'])->toArray()
-        ]);
-    }
-
-    public function update(Request $request, Certificate $certificate)
-    {
-        $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
-            'no_certificate'        => ['required', 'string', 'max:30', Rule::unique('certificates', 'no_certificate')->ignore($certificate->id)],
-            'project_id'            => 'required|exists:projects,id',
-            'barang_certificate_id' => 'required|exists:barang_certificates,id',
-            'status'                => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
-            'date_of_issue'         => 'nullable|date',
-            'date_of_expired'       => 'nullable|date|after:date_of_issue',
-
-            // Multi-file (lampiran baru)
-            'attachments.*'             => ['file', 'max:10240'],
-            'attachment_names'          => ['array'],
-            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
-            'attachment_descriptions'   => ['array'],
-            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
-
-            // Hapus lampiran lama
-            'removed_existing_ids'      => ['array'],
-            'removed_existing_ids.*'    => ['integer', 'exists:certificate_attachments,id'],
-
-            // EDIT lampiran lama (nama & deskripsi)
-            'existing_attachment_ids'               => ['array'],
-            'existing_attachment_ids.*'             => ['integer', 'exists:certificate_attachments,id'],
-            'existing_attachment_names'             => ['array'],
-            'existing_attachment_names.*'           => ['nullable', 'string', 'max:255'],
-            'existing_attachment_descriptions'      => ['array'],
-            'existing_attachment_descriptions.*'    => ['nullable', 'string', 'max:500'],
-        ]);
-
-        if (($validated['date_of_issue'] ?? '') === '') {
-            $validated['date_of_issue'] = null;
-        }
-        if (array_key_exists('date_of_expired', $validated) && $validated['date_of_expired'] === '') {
-            $validated['date_of_expired'] = null;
-        }
-
-        return DB::transaction(function () use ($request, $certificate, $validated) {
-            // 1) Hapus lampiran lama yang dipilih
-            $removedIds = $request->input('removed_existing_ids', []);
-            if (!empty($removedIds)) {
-                $toDelete = CertificateAttachment::whereIn('id', $removedIds)
-                    ->where('certificate_id', $certificate->id)
-                    ->get();
-
-                foreach ($toDelete as $att) {
-                    if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
-                        Storage::disk('public')->delete($att->file_path);
-                    }
-                    $att->delete();
-                }
-            }
-
-            // 2) Update data certificate
-            $certificate->update($validated);
-
-            // 3) Update NAMA & DESKRIPSI lampiran lama (jika ada)
-            $existingIds   = array_values($request->input('existing_attachment_ids', []));
-            $existingNames = array_values($request->input('existing_attachment_names', []));
-            $existingDescs = array_values($request->input('existing_attachment_descriptions', []));
-
-            foreach ($existingIds as $i => $attId) {
-                $att = CertificateAttachment::where('id', $attId)
-                    ->where('certificate_id', $certificate->id)
-                    ->first();
-
-                if ($att) {
-                    if (array_key_exists($i, $existingNames)) {
-                        $att->name = $existingNames[$i];
-                    }
-                    if (array_key_exists($i, $existingDescs)) {
-                        $att->description = $existingDescs[$i];
-                    }
-                    $att->save();
-                }
-            }
-
-            // 4) Simpan lampiran baru (jika ada)
-            $files = $request->file('attachments', []);
-            $names = $request->input('attachment_names', []);
-            $descs = $request->input('attachment_descriptions', []);
-
-            foreach ($files as $i => $file) {
-                if (!$file) continue;
-
-                $path = $file->store('attachments/certificates/' . $certificate->id, 'public');
-                $displayName = $names[$i] ?? $file->getClientOriginalName();
-                $desc = $descs[$i] ?? null;
-
-                $certificate->attachments()->create([
-                    'name'        => $displayName,
-                    'description' => $desc,
-                    'file_path'   => $path,
-                    'mime'        => $file->getClientMimeType(),
-                    'size'        => $file->getSize(),
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Certificate updated successfully',
-                'data' => $certificate->load(['project', 'barangCertificate', 'attachments'])->toArray()
-            ]);
-        });
-    }
-
-    public function destroy(Certificate $certificate)
-    {
-        foreach ($certificate->attachments as $att) {
-            if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
-                Storage::disk('public')->delete($att->file_path);
-            }
-        }
-        $certificate->delete();
-
-        return response()->json([
-            'message' => 'Certificate deleted successfully'
-        ]);
-    }
-
-    public function getFormDependencies()
-    {
-        $projects = Project::select('id', 'name')->get();
-        $barangCertificates = BarangCertificate::select('id', 'name', 'no_seri')->get();
-        $statuses = ['Belum', 'Tidak Aktif', 'Aktif'];
-
-        return response()->json([
+        return [
             'projects' => $projects,
             'barang_certificates' => $barangCertificates,
-            'statuses' => $statuses
-        ]);
+            'statuses' => $statuses,
+            'barang_options' => $barangOptions,
+        ];
     }
 
-    public function __construct()
+    public function __construct(protected CertificateService $certificateService)
     {
-        // Read/list/show/form dependencies
+        // Read/list/show
         $this->middleware('permission:certificate-view')->only([
-            'index', 'show', 'getFormDependencies'
+            'index', 'show'
         ]);
 
         // Create / update / delete

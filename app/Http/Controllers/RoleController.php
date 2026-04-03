@@ -19,28 +19,6 @@ class RoleController extends Controller
     }
 
     /**
-     * Role & permissions user yang sedang login.
-     * GET /auth/role/me
-     */
-    public function me()
-    {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if (! $user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        return response()->json([
-            'id'          => $user->id,
-            'name'        => $user->name,
-            'email'       => $user->email,
-            'roles'       => $user->getRoleNames(),                      // ["super_admin"]
-            'permissions' => $user->getAllPermissions()->pluck('name'),  // ["project-view", "project-create", "activity-view", ...]
-        ]);
-    }
-
-    /**
      * Daftar semua user + roles & permissions.
      * GET /auth/role/users
      *

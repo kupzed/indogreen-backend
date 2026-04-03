@@ -122,4 +122,68 @@ class Activity extends Model
             'url'       => $this->publicStorageUrl($rel),
         ]];
     }
+
+    /**
+     * Scope a query to only include filtered activities.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array  $filters
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFilter($query, array $filters)
+    {
+        $query->when($filters['project_id'] ?? null, function ($query, $projectId) {
+            $query->where('project_id', $projectId);
+        })
+        ->when($filters['jenis'] ?? null, function ($query, $jenis) {
+            $query->where('jenis', $jenis);
+        })
+        ->when($filters['kategori'] ?? null, function ($query, $kategori) {
+            $query->where('kategori', $kategori);
+        })
+        ->when($filters['mitra_id'] ?? null, function ($query, $mitraId) {
+            $query->where('mitra_id', $mitraId);
+        });
+
+        // Filter Date Range (activity_date)
+        if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
+            $query->whereBetween('activity_date', [$filters['date_from'], $filters['date_to']]);
+        } elseif (!empty($filters['date_from'])) {
+            $query->where('activity_date', '>=', $filters['date_from']);
+        } elseif (!empty($filters['date_to'])) {
+            $query->where('activity_date', '<=', $filters['date_to']);
+        }
+
+        // Search (nama, short_desc, description, nama project, nama mitra)
+        $query->when($filters['search'] ?? null, function ($query, $search) {
+            $like = "%{$search}%";
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                  ->orWhere('short_desc', 'like', $like)
+                  ->orWhere('description', 'like', $like)
+                  ->orWhereHas('project', function ($q2) use ($like) {
+                      $q2->where('name', 'like', $like);
+                  })
+                  ->orWhereHas('mitra', function ($q3) use ($like) {
+                      $q3->where('nama', 'like', $like);
+                  });
+            });
+        });
+
+        // Sorting
+        $sortBy  = $filters['sort_by'] ?? 'created';
+        $sortDir = strtolower($filters['sort_dir'] ?? 'desc');
+        if (!in_array($sortDir, ['asc', 'desc'], true)) {
+            $sortDir = 'desc';
+        }
+
+        if ($sortBy === 'activity_date') {
+            $query->orderBy('activity_date', $sortDir)
+                  ->orderBy('id', $sortDir); // tie-breaker
+        } else {
+            $query->orderBy('id', $sortDir);
+        }
+
+        return $query;
+    }
 }

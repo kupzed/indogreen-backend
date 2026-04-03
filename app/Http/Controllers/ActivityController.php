@@ -3,180 +3,56 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
-use App\Models\ActivityAttachment;
 use App\Models\Project;
 use App\Models\Mitra;
+use App\Http\Requests\StoreActivityRequest;
+use App\Http\Requests\UpdateActivityRequest;
+use App\Http\Resources\ActivityResource;
+use App\Services\ActivityService;
 use App\Services\AIDocumentExtractionService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class ActivityController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Activity::with(['project', 'mitra', 'attachments']);
-
-        // Filter by project (dipakai di halaman detail project)
-        if ($request->filled('project_id')) {
-            $query->where('project_id', $request->project_id);
-        }
-
-        // Filter Jenis
-        if ($request->filled('jenis')) {
-            $query->where('jenis', $request->jenis);
-        }
-
-        // Filter Kategori
-        if ($request->filled('kategori')) {
-            $query->where('kategori', $request->kategori);
-        }
-
-        // Filter Mitra (dipakai saat Jenis = Vendor di frontend)
-        if ($request->filled('mitra_id')) {
-            $query->where('mitra_id', $request->mitra_id);
-        }
-
-        // Filter Date Range (activity_date)
-        if ($request->filled('date_from') && $request->filled('date_to')) {
-            $query->whereBetween('activity_date', [$request->date_from, $request->date_to]);
-        } elseif ($request->filled('date_from')) {
-            $query->where('activity_date', '>=', $request->date_from);
-        } elseif ($request->filled('date_to')) {
-            $query->where('activity_date', '<=', $request->date_to);
-        }
-
-        // Search (nama, short_desc, description, nama project, nama mitra)
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $like   = "%{$search}%";
-
-            $query->where(function ($q) use ($like) {
-                $q->where('name', 'like', $like)
-                ->orWhere('short_desc', 'like', $like)
-                ->orWhere('description', 'like', $like)
-                ->orWhereHas('project', function ($q2) use ($like) {
-                    $q2->where('name', 'like', $like);
-                })
-                ->orWhereHas('mitra', function ($q3) use ($like) {
-                    $q3->where('nama', 'like', $like);
-                });
-            });
-        }
-
-        // Sorting: 'created' (pakai id) atau 'activity_date'
-        $sortBy  = $request->input('sort_by', 'created');
-        $sortDir = strtolower($request->input('sort_dir', 'desc'));
-        if (!in_array($sortDir, ['asc', 'desc'], true)) {
-            $sortDir = 'desc';
-        }
-
-        if ($sortBy === 'activity_date') {
-            $query->orderBy('activity_date', $sortDir)
-                ->orderBy('id',           $sortDir); // tie-breaker
-        } else {
-            $query->orderBy('id', $sortDir);
-        }
-
-        // Pagination
         $perPage = $request->integer('per_page', 10);
         $allowed = [10, 25, 50, 100];
         if (!in_array($perPage, $allowed, true)) {
             $perPage = 10;
         }
 
-        $activities = $query->paginate($perPage);
-        $items      = collect($activities->items())->map(fn ($item) => $item->toArray())->toArray();
+        $activities = Activity::with(['project', 'mitra', 'attachments'])
+            ->filter($request->all())
+            ->paginate($perPage);
 
-        // Vendor options khusus project (mirip yang dulu di ProjectController@show)
         $vendorOptions = [];
         if ($request->filled('project_id')) {
-            $vendorIds = Activity::where('project_id', $request->project_id)
-                ->where('jenis', 'Vendor')
-                ->whereNotNull('mitra_id')
-                ->pluck('mitra_id')
-                ->unique()
-                ->values();
-
-            $vendorOptions = Mitra::whereIn('id', $vendorIds)->get(['id', 'nama']);
+            $vendorOptions = $this->activityService->getVendorOptions((int) $request->project_id);
         }
 
-        return response()->json([
+        return ActivityResource::collection($activities)->additional([
             'message' => 'Activities retrieved successfully',
-            'data' => $items,
-            'pagination' => [
-                'total'         => $activities->total(),
-                'per_page'      => $activities->perPage(),
-                'current_page'  => $activities->currentPage(),
-                'last_page'     => $activities->lastPage(),
-                'from'          => $activities->firstItem(),
-                'to'            => $activities->lastItem(),
-            ],
             'vendor_options' => $vendorOptions,
+            'form_dependencies' => $this->getFormDependenciesArray()
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreActivityRequest $request)
     {
-        $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'short_desc'    => 'nullable|string|max:80',
-            'description'   => 'required|string',
-            'project_id'    => 'required|exists:projects,id',
-            'kategori'      => ['required', Rule::in([
-                'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
-                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
-            ])],
-            'value'         => 'nullable|numeric|min:0',
-            'activity_date' => 'required|date',
-            'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'      => 'nullable|exists:partners,id',
-            'from'          => 'nullable|string|max:255',
-            'to'            => 'nullable|string|max:255',
+        $validated = $request->validated();
 
-            // Multi-file
-            'attachments.*'             => ['file', 'max:10240'], // 10MB/file
-            'attachment_names'          => ['array'],
-            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
-            'attachment_descriptions'   => ['array'],
-            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
-        ]);
+        $files = $request->file('attachments', []);
+        $names = $request->input('attachment_names', []);
+        $descs = $request->input('attachment_descriptions', []);
 
-        // Aturan bisnis eksisting
-        if ($request->jenis === 'Internal') $validated['mitra_id'] = 1;
+        $activity = $this->activityService->createActivity($validated, $files, $names, $descs);
 
-        return DB::transaction(function () use ($request, $validated) {
-            $activity = Activity::create($validated);
-
-            // Simpan lampiran baru
-            $files = $request->file('attachments', []);
-            $names = $request->input('attachment_names', []);
-            $descs = $request->input('attachment_descriptions', []);
-
-            foreach ($files as $i => $file) {
-                if (!$file) continue;
-
-                $path = $file->store('attachments/activities/' . $activity->id, 'public');
-                $displayName = $names[$i] ?? $file->getClientOriginalName();
-                $desc = $descs[$i] ?? null;
-
-                $activity->attachments()->create([
-                    'name'        => $displayName,
-                    'description' => $desc,
-                    'file_path'   => $path,
-                    'mime'        => $file->getClientMimeType(),
-                    'size'        => $file->getSize(),
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Activity created successfully',
-                'data' => $activity->load(['project', 'mitra', 'attachments'])->toArray(),
-            ], 201);
-        });
+        return response()->json([
+            'message' => 'Activity created successfully',
+            'data' => new ActivityResource($activity),
+        ], 201);
     }
 
     public function show(Activity $activity)
@@ -184,9 +60,9 @@ class ActivityController extends Controller
         try {
             $activity->load(['project', 'mitra', 'attachments']);
 
-            return response()->json([
+            return (new ActivityResource($activity))->additional([
                 'message' => 'Activity retrieved successfully',
-                'data' => $activity->toArray(),
+                'form_dependencies' => $this->getFormDependenciesArray()
             ]);
         } catch (\Exception $e) {
             Log::error('Error showing activity: ' . $e->getMessage());
@@ -197,143 +73,45 @@ class ActivityController extends Controller
         }
     }
 
-    public function update(Request $request, Activity $activity)
+    public function update(UpdateActivityRequest $request, Activity $activity)
     {
-        $validated = $request->validate([
-            'name'          => 'required|string|max:255',
-            'short_desc'    => 'nullable|string|max:80',
-            'description'   => 'required|string',
-            'project_id'    => 'required|exists:projects,id',
-            'kategori'      => ['required', Rule::in([
-                'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
-                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
-                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
-            ])],
-            'value'         => 'nullable|numeric|min:0',
-            'activity_date' => 'required|date',
-            'jenis'         => ['required', Rule::in(['Internal', 'Customer', 'Vendor'])],
-            'mitra_id'      => 'nullable|exists:partners,id',
-            'from'          => 'nullable|string|max:255',
-            'to'            => 'nullable|string|max:255',
+        $validated = $request->validated();
 
-            // Multi-file (lampiran baru)
-            'attachments.*'             => ['file', 'max:10240'],
-            'attachment_names'          => ['array'],
-            'attachment_names.*'        => ['nullable', 'string', 'max:255'],
-            'attachment_descriptions'   => ['array'],
-            'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
+        $files         = $request->file('attachments', []);
+        $names         = $request->input('attachment_names', []);
+        $descs         = $request->input('attachment_descriptions', []);
+        $removedIds    = $request->input('removed_existing_ids', []);
+        $existingIds   = $request->input('existing_attachment_ids', []);
+        $existingNames = $request->input('existing_attachment_names', []);
+        $existingDescs = $request->input('existing_attachment_descriptions', []);
 
-            // Hapus lampiran lama
-            'removed_existing_ids'      => ['array'],
-            'removed_existing_ids.*'    => ['integer', 'exists:activity_attachments,id'],
+        $activity = $this->activityService->updateActivity(
+            $activity, $validated, $files, $names, $descs,
+            $removedIds, $existingIds, $existingNames, $existingDescs
+        );
 
-            // EDIT lampiran lama (nama & deskripsi)
-            'existing_attachment_ids'               => ['array'],
-            'existing_attachment_ids.*'             => ['integer', 'exists:activity_attachments,id'],
-            'existing_attachment_names'             => ['array'],
-            'existing_attachment_names.*'           => ['nullable', 'string', 'max:255'],
-            'existing_attachment_descriptions'      => ['array'],
-            'existing_attachment_descriptions.*'    => ['nullable', 'string', 'max:500'],
+        return response()->json([
+            'message' => 'Activity updated successfully',
+            'data' => new ActivityResource($activity),
         ]);
-
-        if ($request->jenis === 'Internal') {
-            $validated['mitra_id'] = 1;
-        }
-
-        return DB::transaction(function () use ($request, $activity, $validated) {
-            // 1) Hapus lampiran lama yang dipilih
-            $removedIds = $request->input('removed_existing_ids', []);
-            if (!empty($removedIds)) {
-                /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\ActivityAttachment> $toDelete */
-                $toDelete = ActivityAttachment::whereIn('id', $removedIds)
-                    ->where('activity_id', $activity->id)
-                    ->get();
-
-                /** @var \App\Models\ActivityAttachment $att */
-                foreach ($toDelete as $att) {
-                    if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
-                        Storage::disk('public')->delete($att->file_path);
-                    }
-                    $att->delete();
-                }
-            }
-
-            // 2) Update data activity
-            $activity->update($validated);
-
-            // 3) Update NAMA & DESKRIPSI lampiran lama (jika ada)
-            $existingIds   = array_values($request->input('existing_attachment_ids', []));
-            $existingNames = array_values($request->input('existing_attachment_names', []));
-            $existingDescs = array_values($request->input('existing_attachment_descriptions', []));
-
-            foreach ($existingIds as $i => $attId) {
-                $att = ActivityAttachment::where('id', $attId)
-                    ->where('activity_id', $activity->id)
-                    ->first();
-
-                if ($att) {
-                    // Hanya update kalau value tersedia (boleh null -> kosongkan)
-                    if (array_key_exists($i, $existingNames)) {
-                        $att->name = $existingNames[$i];
-                    }
-                    if (array_key_exists($i, $existingDescs)) {
-                        $att->description = $existingDescs[$i];
-                    }
-                    $att->save();
-                }
-            }
-
-            // 4) Simpan lampiran baru (jika ada)
-            $files = $request->file('attachments', []);
-            $names = $request->input('attachment_names', []);
-            $descs = $request->input('attachment_descriptions', []);
-
-            foreach ($files as $i => $file) {
-                if (!$file) continue;
-
-                $path = $file->store('attachments/activities/' . $activity->id, 'public');
-                $displayName = $names[$i] ?? $file->getClientOriginalName();
-                $desc = $descs[$i] ?? null;
-
-                $activity->attachments()->create([
-                    'name'        => $displayName,
-                    'description' => $desc,
-                    'file_path'   => $path,
-                    'mime'        => $file->getClientMimeType(),
-                    'size'        => $file->getSize(),
-                ]);
-            }
-
-            return response()->json([
-                'message' => 'Activity updated successfully',
-                'data' => $activity->load(['project', 'mitra', 'attachments'])->toArray(),
-            ]);
-        });
     }
-
 
     public function destroy(Activity $activity)
     {
-        // Hapus semua file fisik sebelum delete record
-        foreach ($activity->attachments as $att) {
-            if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
-                Storage::disk('public')->delete($att->file_path);
-            }
-        }
-        $activity->delete();
+        $this->activityService->deleteActivity($activity);
 
         return response()->json([
             'message' => 'Activity deleted successfully'
         ]);
     }
 
-    public function getFormDependencies()
+    private function getFormDependenciesArray(): array
     {
         $projects  = Project::all(['id', 'name', 'mitra_id']);
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
         $vendors   = Mitra::where('is_vendor', true)->get(['id', 'nama']);
 
-        return response()->json([
+        return [
             'projects'      => $projects,
             'customers'     => $customers,
             'vendors'       => $vendors,
@@ -343,14 +121,9 @@ class ActivityController extends Controller
                 'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
             ],
             'jenis_list'    => ['Internal', 'Customer', 'Vendor']
-        ]);
+        ];
     }
 
-    /**
-     * POST /api/activities/extract-document
-     * Accepts a document or image file, sends it to AI, and returns
-     * extracted structured data WITHOUT saving anything to the database.
-     */
     public function extractDocument(Request $request, AIDocumentExtractionService $aiService)
     {
         $request->validate([
@@ -387,11 +160,11 @@ class ActivityController extends Controller
         }
     }
 
-    public function __construct()
+    public function __construct(protected ActivityService $activityService)
     {
         // hak untuk melihat data activity (list, detail, form dependencies)
         $this->middleware('permission:activity-view')->only([
-            'index', 'show', 'getFormDependencies'
+            'index', 'show'
         ]);
         // hak membuat activity
         $this->middleware('permission:activity-create')->only(['store', 'extractDocument']);
