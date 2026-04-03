@@ -18,8 +18,8 @@ class AIDocumentExtractionService
     public function __construct()
     {
         $this->apiKey  = config('services.ai.api_key', '');
-        $this->baseUrl = rtrim(config('services.ai.base_url', 'https://api.x.ai/v1'), '/');
-        $this->model   = config('services.ai.model', 'grok-4-1-fast-non-reasoning');
+        $this->baseUrl = rtrim(config('services.ai.base_url', 'https://generativelanguage.googleapis.com/v1beta'), '/');
+        $this->model   = config('services.ai.model', 'gemini-2.5-flash-lite');
     }
 
     /**

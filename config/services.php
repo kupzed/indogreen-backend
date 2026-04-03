@@ -36,9 +36,9 @@ return [
     ],
 
     'ai' => [
-        'base_url' => env('AI_BASE_URL', 'https://api.x.ai/v1'),
+        'base_url' => env('AI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
         'api_key'  => env('AI_API_KEY', ''),
-        'model'    => env('AI_MODEL', 'grok-4-1-fast-non-reasoning'),
+        'model'    => env('AI_MODEL', 'gemini-2.5-flash-lite'),
     ],
 
 ];
