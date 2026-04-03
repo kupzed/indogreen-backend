@@ -17,16 +17,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('login');
     Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api')->name('logout');
     Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api')->name('refresh');
-    Route::post('/me', [AuthController::class, 'me'])->middleware('auth:api')->name('me');
+    Route::get('/me', [AuthController::class, 'me'])->middleware('auth:api')->name('me');
     Route::put('/profile', [AuthController::class, 'updateProfile'])->middleware('auth:api')->name('profile.update');
     Route::put('/password', [AuthController::class, 'changePassword'])->middleware('auth:api')->name('password.update');
-
-    // ===== ROLE ENDPOINTS =====
-
-    // Role & permission user yang sedang login (boleh diakses semua user yang sudah login)
-    Route::get('/role/me', [RoleController::class, 'me'])
-        ->middleware('auth:api')
-        ->name('role.me');
 
     // Daftar user untuk dikelola (super_admin & admin)
     Route::get('/role/users', [RoleController::class, 'users'])
