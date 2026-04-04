@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Project;
 use App\Models\Certificate;
 use App\Models\Mitra;
@@ -11,16 +10,10 @@ use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    /**
-     * Dashboard data (cards + charts).
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function index()
     {
-        // ---- latest projects
         $latestProjects = Project::with('mitra')->latest()->take(6)->get();
 
-        // ---- status counts
         $totalProjects = Project::count();
         $statusCounts = Project::select('status', DB::raw('COUNT(*) as total'))
             ->groupBy('status')
@@ -31,14 +24,12 @@ class DashboardController extends Controller
         $complete = (int) ($statusCounts['Complete'] ?? 0);
         $cancel   = (int) ($statusCounts['Cancel']   ?? 0);
 
-        // ---- certificate metrics
         $certProjects   = (int) Project::where('is_cert_projects', true)->count();
         $certActive     = (int) Certificate::where('status', 'Aktif')->count();
         $certExpiring30 = (int) Certificate::whereNotNull('date_of_expired')
             ->whereBetween('date_of_expired', [now(), now()->addDays(30)])
             ->count();
 
-        // ---- trend 12 months (by start_date if available, else created_at)
         $start = Carbon::now()->startOfMonth()->subMonths(11);
         $end   = Carbon::now()->endOfMonth();
 
@@ -57,17 +48,14 @@ class DashboardController extends Controller
         $cursor = $start->copy();
         for ($i = 0; $i < 12; $i++) {
             $key = $cursor->format('Y-m');
-            // contoh label: "Jan 2025" (akan mengikuti locale server)
             $labels[] = $cursor->format('M Y');
             $counts[] = (int) ($trendRows[$key] ?? 0);
             $cursor->addMonth();
         }
 
-        // ---- status distribution (for doughnut)
         $statusLabels = ['Ongoing', 'Prospect', 'Complete', 'Cancel'];
         $statusData = array_map(fn ($s) => (int) ($statusCounts[$s] ?? 0), $statusLabels);
 
-        // ---- kategori distribution (bar)
         $kategoriRows = Project::select('kategori', DB::raw('COUNT(*) as total'))
             ->groupBy('kategori')
             ->orderBy('kategori')
@@ -75,7 +63,6 @@ class DashboardController extends Controller
         $kategoriLabels = $kategoriRows->pluck('kategori')->map(fn ($v) => $v ?: 'Tidak ada')->values();
         $kategoriCounts = $kategoriRows->pluck('total')->map(fn ($v) => (int) $v)->values();
 
-        // ---- top customers by project count (max 5)
         $topRows = Project::select('mitra_id', DB::raw('COUNT(*) as total'))
             ->whereNotNull('mitra_id')
             ->groupBy('mitra_id')

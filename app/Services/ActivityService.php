@@ -94,6 +94,55 @@ class ActivityService
     }
 
     /**
+     * Get paginated activities with filters.
+     *
+     * @param array $filters
+     * @param int $perPage
+     * @return \Illuminate\Pagination\LengthAwarePaginator
+     */
+    public function getPaginatedActivities(array $filters, int $perPage)
+    {
+        return Activity::with(['project', 'mitra', 'attachments'])
+            ->filter($filters)
+            ->paginate($perPage);
+    }
+
+    /**
+     * Get project detail with relations.
+     *
+     * @param Activity $activity
+     * @return Activity
+     */
+    public function getActivityDetail(Activity $activity): Activity
+    {
+        return $activity->load(['project', 'mitra', 'attachments']);
+    }
+
+    /**
+     * Get form dependencies for activity.
+     *
+     * @return array
+     */
+    public function getFormDependencies(): array
+    {
+        $projects  = \App\Models\Project::all(['id', 'name', 'mitra_id']);
+        $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);
+        $vendors   = Mitra::where('is_vendor', true)->get(['id', 'nama']);
+
+        return [
+            'projects'      => $projects,
+            'customers'     => $customers,
+            'vendors'       => $vendors,
+            'kategori_list' => [
+                'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation',
+                'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar',
+                'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other',
+            ],
+            'jenis_list'    => ['Internal', 'Customer', 'Vendor']
+        ];
+    }
+
+    /**
      * Get vendor list formatted for specific project.
      *
      * @param int|null $projectId

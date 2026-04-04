@@ -18,13 +18,6 @@ class RoleController extends Controller
         $this->activityLogService = $activityLogService;
     }
 
-    /**
-     * Daftar semua user + roles & permissions.
-     * GET /auth/role/users
-     *
-     * - super_admin: bisa melihat semua user (termasuk super_admin lain)
-     * - admin: tidak boleh melihat user yang punya role super_admin
-     */
     public function users()
     {
         /** @var \App\Models\User|null $actor */
@@ -67,15 +60,6 @@ class RoleController extends Controller
         ]);
     }
 
-    /**
-     * Update role & job (permissions) user tertentu.
-     * PUT /auth/role
-     *
-     * - super_admin: bebas mengubah siapa saja
-     * - admin:
-     *      - tidak boleh mengubah user yang punya role super_admin
-     *      - tidak boleh memberikan role super_admin ke siapa pun
-     */
     public function update(Request $request)
     {
         /** @var \App\Models\User|null $actor */
@@ -99,14 +83,12 @@ class RoleController extends Controller
         /** @var \App\Models\User $targetUser */
         $targetUser = User::findOrFail($data['user_id']);
 
-        // ⬇️ TIDAK boleh edit role milik diri sendiri
         if ($actor->id === $targetUser->id) {
             return response()->json([
                 'message' => 'Kamu tidak boleh mengubah role milik akun kamu sendiri.',
             ], 403);
         }
 
-        // kalau hanya admin (bukan super_admin), batasi sentuh super_admin
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
             if ($targetUser->hasRole('super_admin')) {
                 return response()->json([
@@ -182,13 +164,8 @@ class RoleController extends Controller
         ]);
     }
 
-    /**
-     * Mengambil konfigurasi module & permission actions untuk frontend.
-     * GET /auth/role/config
-     */
     public function config()
     {
-        // Sesuaikan label ini dengan yang sebelumnya ada di frontend Svelte
         $modules = [
             ['key' => 'project',     'label' => 'Project'],
             ['key' => 'activity',    'label' => 'Activity'],

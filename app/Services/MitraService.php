@@ -10,7 +10,7 @@ class MitraService
     /**
      * Get paginated mitras with filters and sorting
      */
-    public function getMitras(array $filters, int $perPage = 10, string $sortBy = 'created', string $sortDir = 'desc'): LengthAwarePaginator
+    public function getPaginatedMitras(array $filters, int $perPage = 10, string $sortBy = 'created', string $sortDir = 'desc'): LengthAwarePaginator
     {
         $query = Mitra::query()->filter($filters);
 
@@ -24,6 +24,31 @@ class MitraService
         }
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Get mitra detail with relations
+     */
+    public function getMitraDetail(Mitra $mitra): Mitra
+    {
+        // Add eager loading here if needed in the future
+        // return $mitra->load(['some_relation']);
+        return $mitra;
+    }
+
+    /**
+     * Get form dependencies for mitra
+     */
+    public function getFormDependencies(): array
+    {
+        return [
+            'kategori_options' => [
+                ['value' => 'pribadi', 'label' => 'Pribadi'],
+                ['value' => 'perusahaan', 'label' => 'Perusahaan'],
+                ['value' => 'customer', 'label' => 'Customer'],
+                ['value' => 'vendor', 'label' => 'Vendor'],
+            ]
+        ];
     }
 
     /**

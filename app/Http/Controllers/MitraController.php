@@ -18,10 +18,10 @@ class MitraController extends Controller
         $sortBy = $request->input('sort_by', 'created');
         $sortDir = $request->input('sort_dir', 'desc');
 
-        $mitras = $this->mitraService->getMitras($filters, $perPage, $sortBy, $sortDir);
+        $mitras = $this->mitraService->getPaginatedMitras($filters, $perPage, $sortBy, $sortDir);
 
         return MitraResource::collection($mitras)->additional([
-            'form_dependencies' => $this->getFormDependencies(),
+            'form_dependencies' => $this->mitraService->getFormDependencies(),
             'message' => 'Mitra retrieved successfully'
         ]);
     }
@@ -38,8 +38,10 @@ class MitraController extends Controller
 
     public function show(Mitra $mitra)
     {
-        return (new MitraResource($mitra))->additional([
-            'form_dependencies' => $this->getFormDependencies(),
+        $mitraDetail = $this->mitraService->getMitraDetail($mitra);
+
+        return (new MitraResource($mitraDetail))->additional([
+            'form_dependencies' => $this->mitraService->getFormDependencies(),
             'message' => 'Mitra retrieved successfully'
         ]);
     }
@@ -56,20 +58,12 @@ class MitraController extends Controller
     public function destroy(Mitra $mitra)
     {
         $this->mitraService->deleteMitra($mitra);
-        return response()->json(['message' => 'Mitra deleted successfully'], 204);
+
+        return response()->json([
+            'message' => 'Mitra deleted successfully'
+        ]);
     }
 
-    private function getFormDependencies(): array
-    {
-        return [
-            'kategori_options' => [
-                ['value' => 'pribadi', 'label' => 'Pribadi'],
-                ['value' => 'perusahaan', 'label' => 'Perusahaan'],
-                ['value' => 'customer', 'label' => 'Customer'],
-                ['value' => 'vendor', 'label' => 'Vendor'],
-            ]
-        ];
-    }
 
     public function __construct(protected MitraService $mitraService)
     {
