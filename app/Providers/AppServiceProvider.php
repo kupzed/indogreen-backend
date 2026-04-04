@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Rate limiter untuk endpoint API umum (60 req/menit)
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(30)->by(
+            return Limit::perMinute(15)->by(
                 $request->user()?->id ?: $request->ip()
             );
         });
