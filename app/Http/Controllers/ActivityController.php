@@ -39,8 +39,12 @@ class ActivityController extends Controller
         ]);
     }
 
-    public function store(StoreActivityRequest $request)
+    public function store(StoreActivityRequest $request, AIDocumentExtractionService $aiService)
     {
+        if ($request->input('action') === 'extract') {
+            return $this->extractDocument($request, $aiService);
+        }
+
         $validated = $request->validated();
 
         $files = $request->file('attachments', []);
@@ -124,38 +128,34 @@ class ActivityController extends Controller
         ];
     }
 
-    public function extractDocument(Request $request, AIDocumentExtractionService $aiService)
+    private function extractDocument(StoreActivityRequest $request, AIDocumentExtractionService $aiService)
     {
-        $request->validate([
-            'document' => [
-                'file',
-                'max:10240', // 10 MB
-                'mimes:jpeg,jpg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt',
-            ],
-        ]);
-
         try {
-            $file   = $request->file('document');
-            $result = $aiService->extract($file);
+            $file      = $request->file('document');
+            $projectId = $request->input('project_id');
+            $result    = $aiService->extract($file, $projectId);
 
             return response()->json([
                 'message' => 'Document extracted successfully',
                 'data'    => $result,
             ]);
         } catch (\RuntimeException $e) {
-            Log::error('AI Document Extraction failed', [
+            Log::error('AI Document Extraction: Runtime failure', [
                 'error' => $e->getMessage(),
-                'file'  => $request->file('document')?->getClientOriginalName(),
+                'file'  => $request->file('document')?->getClientOriginalName() ?? 'unknown',
             ]);
 
             return response()->json([
                 'message' => 'Ekstraksi dokumen gagal: ' . $e->getMessage(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Unexpected error during AI extraction', ['error' => $e->getMessage()]);
+            Log::error('AI Document Extraction: Unexpected failure', [
+                'error' => $e->getMessage(),
+                'file'  => $request->file('document')?->getClientOriginalName() ?? 'unknown',
+            ]);
 
             return response()->json([
-                'message' => 'Terjadi kesalahan tidak terduga. Silakan coba lagi.',
+                'message' => 'Terjadi kesalahan tidak terduga pada layanan ekstraksi. Silakan coba lagi.',
             ], 500);
         }
     }
@@ -167,7 +167,7 @@ class ActivityController extends Controller
             'index', 'show'
         ]);
         // hak membuat activity
-        $this->middleware('permission:activity-create')->only(['store', 'extractDocument']);
+        $this->middleware('permission:activity-create')->only(['store']);
         // hak memperbarui activity
         $this->middleware('permission:activity-update')->only(['update']);
         // hak menghapus activity

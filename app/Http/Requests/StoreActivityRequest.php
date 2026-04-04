@@ -22,7 +22,22 @@ class StoreActivityRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Jika request adalah untuk ekstraksi, gunakan aturan yang lebih minimal
+        if ($this->input('action') === 'extract') {
+            return [
+                'action'     => 'required|in:extract',
+                'document'   => [
+                    'required',
+                    'file',
+                    'max:10240', // 10 MB
+                    'mimes:jpeg,jpg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt',
+                ],
+                'project_id' => 'nullable|integer|exists:projects,id',
+            ];
+        }
+
         return [
+            'action'        => 'nullable|string', // Biarkan opsional untuk backward compatibility
             'name'          => 'required|string|max:255',
             'short_desc'    => 'nullable|string|max:80',
             'description'   => 'required|string',

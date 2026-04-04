@@ -46,7 +46,6 @@ Route::group(['middleware' => ['auth:api', 'throttle:api']], function () {
     Route::apiResource('mitras', MitraController::class);
 
     // Activity
-    Route::post('activities/extract-document', [ActivityController::class, 'extractDocument']);
     Route::apiResource('activities', ActivityController::class);
 
     // Barang Certificate

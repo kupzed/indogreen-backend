@@ -26,21 +26,23 @@ class AIDocumentExtractionService
      * Extract structured data from an uploaded document/image.
      *
      * @param  UploadedFile  $file
+     * @param  int|null $projectId
      * @return array
      * @throws \RuntimeException
      */
-    public function extract(UploadedFile $file): array
+    public function extract(UploadedFile $file, ?int $projectId = null): array
     {
         if (empty($this->apiKey)) {
             throw new \RuntimeException('AI_API_KEY is not configured.');
         }
 
+        $context = $this->buildProjectContext($projectId);
         $mimeType = $file->getClientMimeType();
         $isImage  = in_array($mimeType, self::IMAGE_MIMES, true);
 
         $messages = $isImage
-            ? $this->buildVisionMessages($file, $mimeType)
-            : $this->buildTextMessages($file);
+            ? $this->buildVisionMessages($file, $mimeType, $context)
+            : $this->buildTextMessages($file, $context);
 
         $payload = [
             'model'       => $this->model,
@@ -96,7 +98,7 @@ class AIDocumentExtractionService
     /**
      * Build OpenAI vision-format messages for image files (multimodal).
      */
-    private function buildVisionMessages(UploadedFile $file, string $mimeType): array
+    private function buildVisionMessages(UploadedFile $file, string $mimeType, string $context): array
     {
         $base64 = base64_encode(file_get_contents($file->getRealPath()));
 
@@ -117,7 +119,8 @@ class AIDocumentExtractionService
                     ],
                     [
                         'type' => 'text',
-                        'text' => 'Analyze this document/image and extract the data according to the JSON schema in the system prompt.',
+                        'text' => "Analyze this document/image and extract the data according to the JSON schema in the system prompt.\n\n"
+                               . "PROJECT CONTEXT (Hints):\n{$context}",
                     ],
                 ],
             ],
@@ -128,7 +131,7 @@ class AIDocumentExtractionService
      * Build plain-text messages for non-image files (PDF, DOCX, etc.).
      * The raw text content is extracted from the file and sent as context.
      */
-    private function buildTextMessages(UploadedFile $file): array
+    private function buildTextMessages(UploadedFile $file, string $context): array
     {
         // For non-image files, read as much raw text as possible
         $rawContent = @file_get_contents($file->getRealPath());
@@ -147,10 +150,25 @@ class AIDocumentExtractionService
             [
                 'role'    => 'user',
                 'content' => "The following is the text content extracted from a file named \"{$originalName}\".\n\n"
+                           . "PROJECT CONTEXT (Hints):\n{$context}\n\n"
                            . "---\n{$textContent}\n---\n\n"
                            . "Extract the relevant data and return ONLY the JSON object as specified in the system prompt.",
             ],
         ];
+    }
+
+    /**
+     * Fetch relevant project name/customer hints.
+     */
+    private function buildProjectContext(?int $projectId): string
+    {
+        if (!$projectId) return 'Tidak ada konteks proyek spesifik.';
+
+        $project = \App\Models\Project::with('mitra')->find($projectId);
+        if (!$project) return 'Data proyek tidak ditemukan.';
+
+        $customer = $project->mitra ? $project->mitra->nama : 'N/A';
+        return "Nama Proyek: {$project->name}\nCustomer Proyek: {$customer}";
     }
 
     /**
