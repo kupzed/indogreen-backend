@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class AIDocumentExtractionService
 {
-    private string $apiKey;
     private string $baseUrl;
+    private string $apiKey;
     private string $model;
 
     // MIME types the vision model can handle natively as images
@@ -17,9 +17,9 @@ class AIDocumentExtractionService
 
     public function __construct()
     {
-        $this->apiKey  = config('services.ai.api_key', '');
-        $this->baseUrl = rtrim(config('services.ai.base_url', 'https://api.x.ai/v1'), '/');
-        $this->model   = config('services.ai.model', 'grok-4-1-fast-non-reasoning');
+        $this->baseUrl = rtrim(config('services.ai.base_url'), '/');
+        $this->apiKey  = config('services.ai.api_key');
+        $this->model   = config('services.ai.model');
     }
 
     /**

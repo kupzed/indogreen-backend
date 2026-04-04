@@ -7,6 +7,7 @@ use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
 use App\Http\Resources\ActivityResource;
 use App\Services\ActivityService;
+use App\Services\AIDocumentExtractionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -37,6 +38,27 @@ class ActivityController extends Controller
     public function store(StoreActivityRequest $request)
     {
         $validated = $request->validated();
+
+        // Handle AI Document Extraction
+        if ($request->input('action') === 'extract') {
+            try {
+                $document = $request->file('document');
+                $projectId = $request->input('project_id') ? (int) $request->input('project_id') : null;
+
+                $extractedData = $this->aiService->extract($document, $projectId);
+
+                return response()->json([
+                    'message' => 'Document extracted successfully',
+                    'data' => $extractedData,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('AI Extraction Error: ' . $e->getMessage());
+                return response()->json([
+                    'message' => 'Failed to extract document',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
+        }
 
         $files = $request->file('attachments', []);
         $names = $request->input('attachment_names', []);
@@ -100,8 +122,10 @@ class ActivityController extends Controller
         ]);
     }
 
-    public function __construct(protected ActivityService $activityService)
-    {
+    public function __construct(
+        protected ActivityService $activityService,
+        protected AIDocumentExtractionService $aiService
+    ) {
         $this->middleware('permission:activity-view')->only(['index', 'show']);
         $this->middleware('permission:activity-create')->only(['store']);
         $this->middleware('permission:activity-update')->only(['update']);
