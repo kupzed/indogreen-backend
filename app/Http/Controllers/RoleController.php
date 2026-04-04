@@ -36,10 +36,10 @@ class RoleController extends Controller
             ->where('id', '!=', $actor->id)   // ⬅️ JANGAN kirim user yang sedang login
             ->orderBy('name');
 
-        // Kalau cuma admin (bukan super_admin), jangan tampilkan user super_admin
+        // Kalau cuma admin (bukan super_admin), jangan tampilkan user dengan role admin atau super_admin
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
             $query->whereDoesntHave('roles', function ($q) {
-                $q->where('name', 'super_admin');
+                $q->whereIn('name', ['admin', 'super_admin']);
             });
         }
 
@@ -90,14 +90,14 @@ class RoleController extends Controller
         }
 
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
-            if ($targetUser->hasRole('super_admin')) {
+            if ($targetUser->hasAnyRole(['admin', 'super_admin'])) {
                 return response()->json([
-                    'message' => 'Admin tidak boleh mengubah user dengan role super_admin.',
+                    'message' => 'Admin tidak boleh mengubah user dengan role admin atau super_admin.',
                 ], 403);
             }
-            if ($data['role'] === 'super_admin') {
+            if (in_array($data['role'], ['admin', 'super_admin'])) {
                 return response()->json([
-                    'message' => 'Admin tidak boleh memberikan role super_admin.',
+                    'message' => 'Admin tidak boleh memberikan role admin atau super_admin.',
                 ], 403);
             }
         }
@@ -166,13 +166,37 @@ class RoleController extends Controller
 
     public function config()
     {
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+
+        // Fetch all roles from database
+        $allRoles = Role::pluck('name')->toArray();
+
+        // Filter roles based on actor's capability
+        $filteredRoles = $allRoles;
+        if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
+            $filteredRoles = array_values(array_filter($allRoles, function($role) {
+                return !in_array($role, ['admin', 'super_admin']);
+            }));
+        }
+
+        $rolesData = array_map(function($role) {
+            return [
+                'key'   => $role,
+                'label' => ucwords(str_replace('_', ' ', $role))
+            ];
+        }, $filteredRoles);
+
         $modules = [
             ['key' => 'project',     'label' => 'Project'],
             ['key' => 'activity',    'label' => 'Activity'],
             ['key' => 'mitra',       'label' => 'Mitra'],
             ['key' => 'bc',          'label' => 'Barang Sertifikat'],
             ['key' => 'certificate', 'label' => 'Sertifikat'],
-            ['key' => 'finance',     'label' => 'Finance'],
+            ['key' => 'finance',     'label' => 'Finance', 'actions' => [
+                ['key' => 'view',   'label' => 'View'],
+                ['key' => 'update', 'label' => 'Update'],
+            ]],
         ];
 
         $actions = [
@@ -183,6 +207,7 @@ class RoleController extends Controller
         ];
 
         return response()->json([
+            'roles'   => $rolesData,
             'modules' => $modules,
             'actions' => $actions,
         ]);

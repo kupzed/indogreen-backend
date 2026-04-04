@@ -31,9 +31,9 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
         ->middleware(['auth:api', 'role:super_admin|admin'])
         ->name('role.update');
 
-    // Config role & permission (modul & label)
+    // Config role & permission (modul & label) (super_admin & admin)
     Route::get('/role/config', [RoleController::class, 'config'])
-        ->middleware('auth:api')
+        ->middleware(['auth:api', 'role:super_admin|admin'])
         ->name('role.config');
 });
 
