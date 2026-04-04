@@ -50,7 +50,7 @@ class AuthController extends Controller
             $token = $this->authService->login($credentials);
             return $this->respondWithToken($token);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['error' => $e->getMessage()], 401);
+            return response()->json(['message' => $e->getMessage()], 401);
         }
     }
 
