@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Certificate;
 use App\Http\Resources\CertificateResource;
-use App\Http\Requests\StoreCertificateRequest;
-use App\Http\Requests\UpdateCertificateRequest;
+use App\Http\Requests\CertificateRequest;
 use App\Services\CertificateService;
 use Illuminate\Http\Request;
 
@@ -22,7 +21,7 @@ class CertificateController extends Controller
         ]);
     }
 
-    public function store(StoreCertificateRequest $request)
+    public function store(CertificateRequest $request)
     {
         $certificate = $this->certificateService->createCertificate(
             $request->validated(),
@@ -46,7 +45,7 @@ class CertificateController extends Controller
         ]);
     }
 
-    public function update(UpdateCertificateRequest $request, Certificate $certificate)
+    public function update(CertificateRequest $request, Certificate $certificate)
     {
         $updatedCertificate = $this->certificateService->updateCertificate(
             $certificate,

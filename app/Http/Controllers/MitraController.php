@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Mitra;
-use App\Http\Requests\StoreMitraRequest;
-use App\Http\Requests\UpdateMitraRequest;
+use App\Http\Requests\MitraRequest;
 use App\Http\Resources\MitraResource;
 use App\Services\MitraService;
 use Illuminate\Http\Request;
@@ -26,7 +25,7 @@ class MitraController extends Controller
         ]);
     }
 
-    public function store(StoreMitraRequest $request)
+    public function store(MitraRequest $request)
     {
         $mitra = $this->mitraService->createMitra($request->validated());
 
@@ -46,7 +45,7 @@ class MitraController extends Controller
         ]);
     }
 
-    public function update(UpdateMitraRequest $request, Mitra $mitra)
+    public function update(MitraRequest $request, Mitra $mitra)
     {
         $mitra = $this->mitraService->updateMitra($mitra, $request->validated());
 

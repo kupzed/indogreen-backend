@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Activity;
 use App\Models\Project;
-use App\Http\Requests\FinanceReportRequest;
-use App\Http\Requests\UpdateFinanceValueRequest;
+use App\Http\Requests\FinanceRequest;
 use App\Http\Resources\FinanceResource;
 use App\Services\FinanceService;
 use App\Services\ActivityLogService;
@@ -18,13 +17,7 @@ class FinanceController extends Controller
         $this->middleware('permission:finance-update')->only(['update']);
     }
 
-    /**
-     * Display a listing of finance activities based on filters.
-     *
-     * @param FinanceReportRequest $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function index(FinanceReportRequest $request)
+    public function index(FinanceRequest $request)
     {
         $validated = $request->validated();
         
@@ -57,14 +50,7 @@ class FinanceController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified activity value.
-     *
-     * @param UpdateFinanceValueRequest $request
-     * @param Activity $activity
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function update(UpdateFinanceValueRequest $request, Activity $finance)
+    public function update(FinanceRequest $request, Activity $finance)
     {
         $validated = $request->validated();
 

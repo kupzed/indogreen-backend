@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
-use App\Http\Requests\StoreActivityRequest;
-use App\Http\Requests\UpdateActivityRequest;
+use App\Http\Requests\ActivityRequest;
 use App\Http\Resources\ActivityResource;
 use App\Services\ActivityService;
 use App\Services\AIDocumentExtractionService;
@@ -35,7 +34,7 @@ class ActivityController extends Controller
         ]);
     }
 
-    public function store(StoreActivityRequest $request)
+    public function store(ActivityRequest $request)
     {
         $validated = $request->validated();
 
@@ -90,7 +89,7 @@ class ActivityController extends Controller
         }
     }
 
-    public function update(UpdateActivityRequest $request, Activity $activity)
+    public function update(ActivityRequest $request, Activity $activity)
     {
         $validated = $request->validated();
 

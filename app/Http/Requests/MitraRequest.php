@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreMitraRequest extends FormRequest
+class MitraRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -33,7 +33,6 @@ class StoreMitraRequest extends FormRequest
 
     public function passedValidation()
     {
-        // Optional conversion wrapper
         if (!$this->has('is_pribadi') && !$this->has('is_perusahaan') && !$this->has('is_customer') && !$this->has('is_vendor')) {
             abort(response()->json(['message' => 'Minimal satu kategori mitra wajib dipilih.'], 422));
         }

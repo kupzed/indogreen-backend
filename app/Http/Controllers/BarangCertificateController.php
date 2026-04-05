@@ -3,8 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BarangCertificate;
-use App\Http\Requests\StoreBarangCertificateRequest;
-use App\Http\Requests\UpdateBarangCertificateRequest;
+use App\Http\Requests\BarangCertificateRequest;
 use App\Http\Resources\BarangCertificateResource;
 use App\Services\BarangCertificateService;
 use Illuminate\Http\Request;
@@ -24,7 +23,7 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    public function store(StoreBarangCertificateRequest $request)
+    public function store(BarangCertificateRequest $request)
     {
         $validated = $request->validated();
 
@@ -46,7 +45,7 @@ class BarangCertificateController extends Controller
         ]);
     }
 
-    public function update(UpdateBarangCertificateRequest $request, BarangCertificate $barangCertificate)
+    public function update(BarangCertificateRequest $request, BarangCertificate $barangCertificate)
     {
         $validated = $request->validated();
 

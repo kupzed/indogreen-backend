@@ -5,24 +5,30 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateActivityRequest extends FormRequest
+class ActivityRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array|string>
-     */
     public function rules(): array
     {
+        if ($this->input('action') === 'extract') {
+            return [
+                'action'     => 'required|in:extract',
+                'document'   => [
+                    'required',
+                    'file',
+                    'max:10240', // 10 MB
+                    'mimes:jpeg,jpg,png,gif,webp,pdf,doc,docx,xls,xlsx,txt',
+                ],
+                'project_id' => 'nullable|integer|exists:projects,id',
+            ];
+        }
+
         return [
+            'action'        => 'nullable|string',
             'name'          => 'required|string|max:255',
             'short_desc'    => 'nullable|string|max:80',
             'description'   => 'required|string',
@@ -40,17 +46,15 @@ class UpdateActivityRequest extends FormRequest
             'to'            => 'nullable|string|max:255',
 
             // Multi-file (lampiran baru)
-            'attachments.*'             => ['file', 'max:10240'],
+            'attachments.*'             => ['file', 'max:10240'], // 10MB/file
             'attachment_names'          => ['array'],
             'attachment_names.*'        => ['nullable', 'string', 'max:255'],
             'attachment_descriptions'   => ['array'],
             'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
 
-            // Hapus lampiran lama
+            // Edit lampiran lama (hanya berlaku saat Update)
             'removed_existing_ids'      => ['array'],
             'removed_existing_ids.*'    => ['integer', 'exists:activity_attachments,id'],
-
-            // EDIT lampiran lama (nama & deskripsi)
             'existing_attachment_ids'               => ['array'],
             'existing_attachment_ids.*'             => ['integer', 'exists:activity_attachments,id'],
             'existing_attachment_names'             => ['array'],
@@ -59,13 +63,9 @@ class UpdateActivityRequest extends FormRequest
             'existing_attachment_descriptions.*'    => ['nullable', 'string', 'max:500'],
         ];
     }
-    
-    /**
-     * Prepare the data for validation.
-     */
+
     protected function prepareForValidation()
     {
-        // Business logic from Controller: if jenis === 'Internal', then mitra_id = 1
         if ($this->jenis === 'Internal') {
             $this->merge([
                 'mitra_id' => 1,

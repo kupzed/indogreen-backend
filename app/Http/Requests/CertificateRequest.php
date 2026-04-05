@@ -5,20 +5,25 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateCertificateRequest extends FormRequest
+class CertificateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; 
+        return true;
     }
 
     public function rules(): array
     {
-        $certificateId = $this->route('certificate')->id ?? $this->route('certificate');
+        $id = $this->route('certificate')->id ?? $this->route('certificate');
 
         return [
             'name'                  => 'required|string|max:255',
-            'no_certificate'        => ['required', 'string', 'max:30', Rule::unique('certificates', 'no_certificate')->ignore($certificateId)],
+            'no_certificate'        => [
+                'required',
+                'string',
+                'max:30',
+                Rule::unique('certificates', 'no_certificate')->ignore($id)
+            ],
             'project_id'            => 'required|exists:projects,id',
             'barang_certificate_id' => 'required|exists:barang_certificates,id',
             'status'                => ['required', Rule::in(['Belum', 'Tidak Aktif', 'Aktif'])],
@@ -32,7 +37,7 @@ class UpdateCertificateRequest extends FormRequest
             'attachment_descriptions'   => ['array'],
             'attachment_descriptions.*' => ['nullable', 'string', 'max:500'],
 
-            // Hapus lampiran lama
+            // Hapus lampiran lama (hanya berlaku saat Update)
             'removed_existing_ids'      => ['array'],
             'removed_existing_ids.*'    => ['integer', 'exists:certificate_attachments,id'],
 
