@@ -19,9 +19,6 @@ class AuthController extends Controller
         $this->authService = $authService;
     }
 
-    /**
-     * Handle user registration.
-     */
     public function register(Request $request): UserResource|JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -39,9 +36,6 @@ class AuthController extends Controller
         return new UserResource($user);
     }
 
-    /**
-     * Handle user login.
-     */
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->only('email', 'password');
@@ -54,34 +48,22 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Get authenticated user.
-     */
     public function me(): UserResource
     {
         return new UserResource($this->authService->me());
     }
 
-    /**
-     * Handle user logout.
-     */
     public function logout(): JsonResponse
     {
         $this->authService->logout();
         return response()->json(['message' => 'Successfully logged out']);
     }
 
-    /**
-     * Refresh the JWT token.
-     */
     public function refresh(): JsonResponse
     {
         return $this->respondWithToken(Auth::refresh());
     }
 
-    /**
-     * Update user profile.
-     */
     public function updateProfile(Request $request): UserResource|JsonResponse
     {
         $validated = $request->validate([
@@ -98,17 +80,14 @@ class AuthController extends Controller
         return new UserResource($user);
     }
 
-    /**
-     * Change user password.
-     */
     public function changePassword(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'current_password' => ['required', 'string'],
             'password' => [
                 'required', 'string', 'min:8', 'confirmed',
-                'regex:/[a-z]/',  // minimal 1 huruf kecil
-                'regex:/[A-Z]/',  // minimal 1 huruf besar
+                'regex:/[a-z]/',
+                'regex:/[A-Z]/',
                 'different:current_password',
             ],
         ], [
@@ -129,9 +108,6 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Format the response with the token.
-     */
     protected function respondWithToken(string $token): JsonResponse
     {
         return response()->json([

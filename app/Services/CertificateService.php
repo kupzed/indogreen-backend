@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\Storage;
 
 class CertificateService
 {
-    /**
-     * Get paginated certificates with filters
-     */
     public function getPaginatedCertificates(array $filters, int $perPage)
     {
         $query = Certificate::with(['project', 'barangCertificate', 'attachments']);
@@ -36,17 +33,11 @@ class CertificateService
         return $query->paginate($perPage);
     }
 
-    /**
-     * Get certificate detail with relations
-     */
     public function getCertificateDetail(Certificate $certificate): Certificate
     {
         return $certificate->load(['project', 'barangCertificate', 'attachments']);
     }
 
-    /**
-     * Get form dependencies for certificate
-     */
     public function getFormDependencies(Request $request): array
     {
         $projects = Project::select('id', 'name')->get();
@@ -71,9 +62,6 @@ class CertificateService
         ];
     }
 
-    /**
-     * Store new certificate and handle files.
-     */
     public function createCertificate(array $validatedData, array $files = [], array $names = [], array $descs = []): Certificate
     {
         return DB::transaction(function () use ($validatedData, $files, $names, $descs) {
@@ -85,9 +73,6 @@ class CertificateService
         });
     }
 
-    /**
-     * Update existing certificate, remove specified files, update metadata for existing files, and attach new.
-     */
     public function updateCertificate(
         Certificate $certificate, 
         array $validatedData,
@@ -104,7 +89,6 @@ class CertificateService
             $removedIds, $existingIds, $existingNames, $existingDescs, 
             $files, $names, $descs
         ) {
-            // 1) Hapus lampiran lama yang dipilih
             if (!empty($removedIds)) {
                 $toDelete = CertificateAttachment::whereIn('id', $removedIds)
                     ->where('certificate_id', $certificate->id)
@@ -119,10 +103,8 @@ class CertificateService
                 }
             }
 
-            // 2) Update data certificate
             $certificate->update($validatedData);
 
-            // 3) Update NAMA & DESKRIPSI lampiran lama (jika ada)
             $existingIdsValues = array_values($existingIds);
             $existingNamesValues = array_values($existingNames);
             $existingDescsValues = array_values($existingDescs);
@@ -143,16 +125,12 @@ class CertificateService
                 }
             }
 
-            // 4) Simpan lampiran baru (jika ada)
             $this->handleNewAttachments($certificate, $files, $names, $descs);
 
             return $certificate->load(['project', 'barangCertificate', 'attachments']);
         });
     }
 
-    /**
-     * Delete certificate and remove its physical attachments.
-     */
     public function deleteCertificate(Certificate $certificate): void
     {
         foreach ($certificate->attachments as $att) {
@@ -168,9 +146,6 @@ class CertificateService
         $certificate->delete();
     }
 
-    /**
-     * Handle file uploads and persist metadata into CertificateAttachment.
-     */
     protected function handleNewAttachments(Certificate $certificate, array $files, array $names, array $descs): void
     {
         foreach ($files as $i => $file) {

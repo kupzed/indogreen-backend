@@ -7,11 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class BarangCertificateResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -21,8 +16,7 @@ class BarangCertificateResource extends JsonResource
             'mitra_id' => $this->mitra_id,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            
-            // Relasi
+
             'mitra' => $this->whenLoaded('mitra', function() {
                 return [
                     'id' => $this->mitra->id,

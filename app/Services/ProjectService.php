@@ -7,48 +7,22 @@ use App\Models\Mitra;
 
 class ProjectService
 {
-    /**
-     * Create a new project
-     *
-     * @param array $data
-     * @return Project
-     */
     public function createProject(array $data): Project
     {
         return Project::create($data);
     }
 
-    /**
-     * Update an existing project
-     *
-     * @param Project $project
-     * @param array $data
-     * @return Project
-     */
     public function updateProject(Project $project, array $data): Project
     {
         $project->update($data);
         return $project;
     }
 
-    /**
-     * Delete a project
-     *
-     * @param Project $project
-     * @return void
-     */
     public function deleteProject(Project $project): void
     {
         $project->delete();
     }
 
-    /**
-     * Get paginated projects with filters
-     *
-     * @param array $filters
-     * @param int $perPage
-     * @return \Illuminate\Pagination\LengthAwarePaginator
-     */
     public function getPaginatedProjects(array $filters, int $perPage)
     {
         return Project::with('mitra')
@@ -56,22 +30,11 @@ class ProjectService
             ->paginate($perPage);
     }
 
-    /**
-     * Get project detail with relations
-     *
-     * @param Project $project
-     * @return Project
-     */
     public function getProjectDetail(Project $project): Project
     {
         return $project->load('mitra');
     }
 
-    /**
-     * Get form dependencies for project
-     *
-     * @return array
-     */
     public function getFormDependencies(): array
     {
         $customers = Mitra::where('is_customer', true)->get(['id', 'nama']);

@@ -20,12 +20,9 @@ class CertificateResource extends JsonResource
             'date_of_expired' => $this->date_of_expired?->format('Y-m-d'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            
-            // Relasi (bisa otomatis dimuat jika di-load)
+
             'project' => $this->whenLoaded('project'),
             'barang_certificate' => $this->whenLoaded('barangCertificate'),
-            // Appended attribute 'attachments' dari model Certificate akan otomatis di-serialize,
-            // atau bisa juga menggunakan return model relations jika butuh resource terpisah.
             'attachments' => $this->attachments,
         ];
     }

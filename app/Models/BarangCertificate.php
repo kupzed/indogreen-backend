@@ -28,9 +28,6 @@ class BarangCertificate extends Model
         return $this->hasMany(Certificate::class, 'barang_certificate_id');
     }
 
-    /**
-     * Get activity name for logging
-     */
     public function getActivityNameAttribute()
     {
         return $this->name ?? 'Barang Certificate #' . $this->id;

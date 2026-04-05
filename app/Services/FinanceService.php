@@ -3,10 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Project;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class FinanceService
 {
@@ -17,12 +14,6 @@ class FinanceService
         $this->activityLogService = $activityLogService;
     }
 
-    /**
-     * Get finance activities based on filters.
-     *
-     * @param array $filters
-     * @return Collection
-     */
     public function getFinanceReport(array $filters): Collection
     {
         $type = $filters['type'] ?? 'month';
@@ -35,9 +26,8 @@ class FinanceService
         if ($type === 'month') {
             $month = $filters['month'] ?? date('n');
             $year = $filters['year'] ?? date('Y');
-            
             $query->whereYear('activity_date', $year)
-                  ->whereMonth('activity_date', $month);
+                ->whereMonth('activity_date', $month);
         } elseif ($type === 'project') {
             $projectId = $filters['project_id'];
             $startDate = $filters['start_date'] ?? null;
@@ -57,13 +47,6 @@ class FinanceService
         return $query->get();
     }
 
-    /**
-     * Update activity value and log the change.
-     *
-     * @param Activity $activity
-     * @param float $value
-     * @return Activity
-     */
     public function updateActivityValue(Activity $activity, float $value): Activity
     {
         $previousValue = $activity->value;
@@ -85,11 +68,6 @@ class FinanceService
         return $activity;
     }
 
-    /**
-     * List of finance categories.
-     *
-     * @return array
-     */
     public function getFinanceCategories(): array
     {
         return [

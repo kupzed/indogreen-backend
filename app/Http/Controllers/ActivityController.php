@@ -38,7 +38,6 @@ class ActivityController extends Controller
     {
         $validated = $request->validated();
 
-        // Handle AI Document Extraction
         if ($request->input('action') === 'extract') {
             try {
                 $document = $request->file('document');

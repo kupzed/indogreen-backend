@@ -27,16 +27,14 @@ class RoleController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Safety: pastikan hanya super_admin atau admin
         if (! $actor->hasAnyRole(['super_admin', 'admin'])) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
         $query = User::query()
-            ->where('id', '!=', $actor->id)   // ⬅️ JANGAN kirim user yang sedang login
+            ->where('id', '!=', $actor->id)
             ->orderBy('name');
 
-        // Kalau cuma admin (bukan super_admin), jangan tampilkan user dengan role admin atau super_admin
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
             $query->whereDoesntHave('roles', function ($q) {
                 $q->whereIn('name', ['admin', 'super_admin']);
@@ -169,10 +167,8 @@ class RoleController extends Controller
         /** @var \App\Models\User $actor */
         $actor = Auth::user();
 
-        // Fetch all roles from database
         $allRoles = Role::pluck('name')->toArray();
 
-        // Filter roles based on actor's capability
         $filteredRoles = $allRoles;
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
             $filteredRoles = array_values(array_filter($allRoles, function($role) {

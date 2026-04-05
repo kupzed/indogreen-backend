@@ -41,17 +41,11 @@ class Mitra extends Model
         return $this->hasMany(BarangCertificate::class, 'mitra_id');
     }
 
-    /**
-     * Get activity name for logging
-     */
     public function getActivityNameAttribute()
     {
         return $this->nama ?? 'Mitra #' . $this->id;
     }
 
-    /**
-     * Filter scope for search, date, and kategori.
-     */
     public function scopeFilter(Builder $query, array $filters)
     {
         $query->when($filters['kategori'] ?? null, function ($query, $kategori) {

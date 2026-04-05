@@ -10,15 +10,6 @@ use Illuminate\Support\Facades\Storage;
 
 class ActivityService
 {
-    /**
-     * Store a newly created Activity and handle file uploads.
-     *
-     * @param array $data
-     * @param array $files
-     * @param array $names
-     * @param array $descs
-     * @return Activity
-     */
     public function createActivity(array $data, array $files = [], array $names = [], array $descs = []): Activity
     {
         return DB::transaction(function () use ($data, $files, $names, $descs) {
@@ -30,20 +21,6 @@ class ActivityService
         });
     }
 
-    /**
-     * Update an Activity, managing old and new attachments.
-     *
-     * @param Activity $activity
-     * @param array $data
-     * @param array $files
-     * @param array $names
-     * @param array $descs
-     * @param array $removedIds
-     * @param array $existingIds
-     * @param array $existingNames
-     * @param array $existingDescs
-     * @return Activity
-     */
     public function updateActivity(
         Activity $activity,
         array $data,
@@ -59,30 +36,17 @@ class ActivityService
             $activity, $data, $files, $names, $descs,
             $removedIds, $existingIds, $existingNames, $existingDescs
         ) {
-            // 1) Remove obsolete attachments
             if (!empty($removedIds)) {
                 $this->removeAttachments($activity->id, $removedIds);
             }
-
-            // 2) Update main data
             $activity->update($data);
-
-            // 3) Update descriptions/names of existing attachments
             $this->updateExistingAttachments($activity->id, $existingIds, $existingNames, $existingDescs);
-
-            // 4) Add new attachments
             $this->handleNewAttachments($activity, $files, $names, $descs);
 
             return $activity->load(['project', 'mitra', 'attachments']);
         });
     }
 
-    /**
-     * Delete an activity along with all its files.
-     *
-     * @param Activity $activity
-     * @return void
-     */
     public function deleteActivity(Activity $activity): void
     {
         foreach ($activity->attachments as $att) {
@@ -93,13 +57,6 @@ class ActivityService
         $activity->delete();
     }
 
-    /**
-     * Get paginated activities with filters.
-     *
-     * @param array $filters
-     * @param int $perPage
-     * @return \Illuminate\Pagination\LengthAwarePaginator
-     */
     public function getPaginatedActivities(array $filters, int $perPage)
     {
         return Activity::with(['project', 'mitra', 'attachments'])
@@ -107,22 +64,11 @@ class ActivityService
             ->paginate($perPage);
     }
 
-    /**
-     * Get project detail with relations.
-     *
-     * @param Activity $activity
-     * @return Activity
-     */
     public function getActivityDetail(Activity $activity): Activity
     {
         return $activity->load(['project', 'mitra', 'attachments']);
     }
 
-    /**
-     * Get form dependencies for activity.
-     *
-     * @return array
-     */
     public function getFormDependencies(): array
     {
         $projects  = \App\Models\Project::all(['id', 'name', 'mitra_id']);
@@ -142,12 +88,6 @@ class ActivityService
         ];
     }
 
-    /**
-     * Get vendor list formatted for specific project.
-     *
-     * @param int|null $projectId
-     * @return \Illuminate\Database\Eloquent\Collection|array
-     */
     public function getVendorOptions(?int $projectId)
     {
         if (!$projectId) {
@@ -164,9 +104,6 @@ class ActivityService
         return Mitra::whereIn('id', $vendorIds)->get(['id', 'nama']);
     }
 
-    /**
-     * Handle saving new attachment files.
-     */
     private function handleNewAttachments(Activity $activity, array $files, array $names, array $descs): void
     {
         foreach ($files as $i => $file) {
@@ -186,9 +123,6 @@ class ActivityService
         }
     }
 
-    /**
-     * Remove obsolete attachments by their ID.
-     */
     private function removeAttachments(int $activityId, array $removedIds): void
     {
         $toDelete = ActivityAttachment::whereIn('id', $removedIds)
@@ -204,20 +138,15 @@ class ActivityService
         }
     }
 
-    /**
-     * Update existing attachments name and description
-     */
     private function updateExistingAttachments(int $activityId, array $existingIds, array $existingNames, array $existingDescs): void
     {
         $existingIds   = array_values($existingIds);
         $existingNames = array_values($existingNames);
         $existingDescs = array_values($existingDescs);
-
         foreach ($existingIds as $i => $attId) {
             $att = ActivityAttachment::where('id', $attId)
                 ->where('activity_id', $activityId)
                 ->first();
-
             if ($att) {
                 if (array_key_exists($i, $existingNames)) {
                     $att->name = $existingNames[$i];

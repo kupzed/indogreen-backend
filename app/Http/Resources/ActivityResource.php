@@ -7,11 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ActivityResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
         return [
@@ -30,10 +25,9 @@ class ActivityResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
-            // Relations
             'project' => $this->whenLoaded('project'),
             'mitra' => $this->whenLoaded('mitra'),
-            'attachments' => $this->attachments, // defined via appends/accessor in model
+            'attachments' => $this->attachments,
         ];
     }
 }

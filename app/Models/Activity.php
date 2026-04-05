@@ -123,13 +123,6 @@ class Activity extends Model
         ]];
     }
 
-    /**
-     * Scope a query to only include filtered activities.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  array  $filters
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
     public function scopeFilter($query, array $filters)
     {
         $query->when($filters['project_id'] ?? null, function ($query, $projectId) {
@@ -145,7 +138,6 @@ class Activity extends Model
             $query->where('mitra_id', $mitraId);
         });
 
-        // Filter Date Range (activity_date)
         if (!empty($filters['date_from']) && !empty($filters['date_to'])) {
             $query->whereBetween('activity_date', [$filters['date_from'], $filters['date_to']]);
         } elseif (!empty($filters['date_from'])) {
@@ -154,7 +146,6 @@ class Activity extends Model
             $query->where('activity_date', '<=', $filters['date_to']);
         }
 
-        // Search (nama, short_desc, description, nama project, nama mitra)
         $query->when($filters['search'] ?? null, function ($query, $search) {
             $like = "%{$search}%";
             $query->where(function ($q) use ($like) {
@@ -170,7 +161,6 @@ class Activity extends Model
             });
         });
 
-        // Sorting
         $sortBy  = $filters['sort_by'] ?? 'created';
         $sortDir = strtolower($filters['sort_dir'] ?? 'desc');
         if (!in_array($sortDir, ['asc', 'desc'], true)) {

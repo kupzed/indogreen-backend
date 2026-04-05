@@ -12,7 +12,6 @@ class AIDocumentExtractionService
     private string $apiKey;
     private string $model;
 
-    // MIME types the vision model can handle natively as images
     private const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
     public function __construct()
@@ -22,14 +21,6 @@ class AIDocumentExtractionService
         $this->model   = config('services.ai.model');
     }
 
-    /**
-     * Extract structured data from an uploaded document/image.
-     *
-     * @param  UploadedFile  $file
-     * @param  int|null $projectId
-     * @return array
-     * @throws \RuntimeException
-     */
     public function extract(UploadedFile $file, ?int $projectId = null): array
     {
         if (empty($this->apiKey)) {
@@ -68,7 +59,6 @@ class AIDocumentExtractionService
 
         $responseData = $response->json();
 
-        // OpenAI-compatible response: choices[0].message.content
         $rawText = $responseData['choices'][0]['message']['content'] ?? '';
 
         if (empty(trim($rawText))) {
@@ -76,7 +66,6 @@ class AIDocumentExtractionService
             throw new \RuntimeException('AI returned an empty response. Please try again.');
         }
 
-        // Strip markdown code fences if present (```json ... ```)
         $cleanedText = trim(preg_replace(
             ['/^```(?:json)?\s*/i', '/\s*```$/'],
             '',
@@ -95,13 +84,9 @@ class AIDocumentExtractionService
         return $this->sanitize($parsed);
     }
 
-    /**
-     * Build OpenAI vision-format messages for image files (multimodal).
-     */
     private function buildVisionMessages(UploadedFile $file, string $mimeType, string $context): array
     {
         $base64 = base64_encode(file_get_contents($file->getRealPath()));
-
         return [
             [
                 'role'    => 'system',
@@ -120,23 +105,16 @@ class AIDocumentExtractionService
                     [
                         'type' => 'text',
                         'text' => "Analyze this document/image and extract the data according to the JSON schema in the system prompt.\n\n"
-                               . "PROJECT CONTEXT (Hints):\n{$context}",
+                                . "PROJECT CONTEXT (Hints):\n{$context}",
                     ],
                 ],
             ],
         ];
     }
 
-    /**
-     * Build plain-text messages for non-image files (PDF, DOCX, etc.).
-     * The raw text content is extracted from the file and sent as context.
-     */
     private function buildTextMessages(UploadedFile $file, string $context): array
     {
-        // For non-image files, read as much raw text as possible
         $rawContent = @file_get_contents($file->getRealPath());
-
-        // Strip binary noise for binary formats and limit length
         $textContent = preg_replace('/[^\x20-\x7E\xA0-\xFF\n\r\t]/u', ' ', $rawContent ?? '');
         $textContent = mb_substr(trim($textContent), 0, 8000); // keep within token budget
 
@@ -150,16 +128,13 @@ class AIDocumentExtractionService
             [
                 'role'    => 'user',
                 'content' => "The following is the text content extracted from a file named \"{$originalName}\".\n\n"
-                           . "PROJECT CONTEXT (Hints):\n{$context}\n\n"
-                           . "---\n{$textContent}\n---\n\n"
-                           . "Extract the relevant data and return ONLY the JSON object as specified in the system prompt.",
+                            . "PROJECT CONTEXT (Hints):\n{$context}\n\n"
+                            . "---\n{$textContent}\n---\n\n"
+                            . "Extract the relevant data and return ONLY the JSON object as specified in the system prompt.",
             ],
         ];
     }
 
-    /**
-     * Fetch relevant project name/customer hints.
-     */
     private function buildProjectContext(?int $projectId): string
     {
         if (!$projectId) return 'Tidak ada konteks proyek spesifik.';
@@ -171,9 +146,6 @@ class AIDocumentExtractionService
         return "Nama Proyek: {$project->name}\nCustomer Proyek: {$customer}";
     }
 
-    /**
-     * The system prompt that enforces strict JSON output.
-     */
     private function systemPrompt(): string
     {
         return <<<'PROMPT'
@@ -200,9 +172,6 @@ ATURAN PENTING:
 PROMPT;
     }
 
-    /**
-     * Sanitize and strictly validate the parsed AI response.
-     */
     private function sanitize(array $data): array
     {
         $allowedKategori = [
@@ -214,15 +183,9 @@ PROMPT;
 
         $allowedJenis = ['Internal', 'Customer', 'Vendor'];
 
-        // Pembersihan ekstraksi nilai (value) untuk mengantisipasi AI yang tidak patuh
         $rawValue = $data['value'] ?? 0;
         if (is_string($rawValue)) {
-            // Hapus semua karakter kecuali angka dan titik desimal
-            // Ini akan merubah "Rp 49,950,000" atau "49.950.000,00" menjadi angka yang bisa diproses PHP
             $cleanValue = preg_replace('/[^0-9]/', '', $rawValue);
-            // Asumsi tidak pakai sen/desimal di akhir untuk invoice Indonesia, 
-            // jika ada, penanganannya mungkin butuh regex yg lebih spesifik.
-            // Untuk case ini, ambil angka utuhnya saja.
             $finalValue = (float) $cleanValue; 
         } else {
             $finalValue = (float) $rawValue;
@@ -245,9 +208,6 @@ PROMPT;
         ];
     }
 
-    /**
-     * Validate and normalize a date string to YYYY-MM-DD.
-     */
     private function parseDate(string $date): string
     {
         if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -257,6 +217,6 @@ PROMPT;
             }
         }
 
-        return date('Y-m-d'); // fallback: today
+        return date('Y-m-d');
     }
 }

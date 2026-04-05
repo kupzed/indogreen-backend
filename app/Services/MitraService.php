@@ -7,9 +7,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class MitraService
 {
-    /**
-     * Get paginated mitras with filters and sorting
-     */
     public function getPaginatedMitras(array $filters, int $perPage = 10, string $sortBy = 'created', string $sortDir = 'desc'): LengthAwarePaginator
     {
         $query = Mitra::query()->filter($filters);
@@ -26,19 +23,11 @@ class MitraService
         return $query->paginate($perPage);
     }
 
-    /**
-     * Get mitra detail with relations
-     */
     public function getMitraDetail(Mitra $mitra): Mitra
     {
-        // Add eager loading here if needed in the future
-        // return $mitra->load(['some_relation']);
         return $mitra;
     }
 
-    /**
-     * Get form dependencies for mitra
-     */
     public function getFormDependencies(): array
     {
         return [
@@ -51,9 +40,6 @@ class MitraService
         ];
     }
 
-    /**
-     * Store a new mitra
-     */
     public function createMitra(array $data): Mitra
     {
         $data['is_pribadi'] = isset($data['is_pribadi']) ? filter_var($data['is_pribadi'], FILTER_VALIDATE_BOOLEAN) : false;
@@ -64,9 +50,6 @@ class MitraService
         return Mitra::create($data);
     }
 
-    /**
-     * Update an existing mitra
-     */
     public function updateMitra(Mitra $mitra, array $data): Mitra
     {
         $data['is_pribadi'] = isset($data['is_pribadi']) ? filter_var($data['is_pribadi'], FILTER_VALIDATE_BOOLEAN) : $mitra->is_pribadi;
@@ -79,9 +62,6 @@ class MitraService
         return $mitra;
     }
 
-    /**
-     * Delete a mitra
-     */
     public function deleteMitra(Mitra $mitra): bool
     {
         return $mitra->delete();
