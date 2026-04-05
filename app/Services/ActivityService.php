@@ -12,6 +12,7 @@ class ActivityService
 {
     public function createActivity(array $data, array $files = [], array $names = [], array $descs = []): Activity
     {
+        // Menggunakan database transaction untuk memastikan data aktivitas dan attachment tersimpan secara atomik
         return DB::transaction(function () use ($data, $files, $names, $descs) {
             $activity = Activity::create($data);
 
@@ -36,11 +37,16 @@ class ActivityService
             $activity, $data, $files, $names, $descs,
             $removedIds, $existingIds, $existingNames, $existingDescs
         ) {
+            // Menghapus attachment yang ditandai untuk dihapus oleh user dari storage dan database
             if (!empty($removedIds)) {
                 $this->removeAttachments($activity->id, $removedIds);
             }
             $activity->update($data);
+            
+            // Memperbarui nama dan deskripsi attachment lama yang tidak dihapus
             $this->updateExistingAttachments($activity->id, $existingIds, $existingNames, $existingDescs);
+            
+            // Memproses file attachment baru yang diunggah
             $this->handleNewAttachments($activity, $files, $names, $descs);
 
             return $activity->load(['project', 'mitra', 'attachments']);
@@ -49,6 +55,7 @@ class ActivityService
 
     public function deleteActivity(Activity $activity): void
     {
+        // Wajib menghapus file fisik di storage sebelum menghapus record database agar tidak terjadi file sampah (orphaned files)
         foreach ($activity->attachments as $att) {
             if ($att->file_path && Storage::disk('public')->exists($att->file_path)) {
                 Storage::disk('public')->delete($att->file_path);
@@ -94,6 +101,7 @@ class ActivityService
             return [];
         }
 
+        // Mencari daftar unik mitra (vendor) yang pernah terlibat dalam proyek tertentu
         $vendorIds = Activity::where('project_id', $projectId)
             ->where('jenis', 'Vendor')
             ->whereNotNull('mitra_id')
@@ -109,6 +117,7 @@ class ActivityService
         foreach ($files as $i => $file) {
             if (!$file) continue;
 
+            // Menyimpan file ke storage public dengan format folder yang terorganisir per activity ID
             $path = $file->store('attachments/activities/' . $activity->id, 'public');
             $displayName = $names[$i] ?? $file->getClientOriginalName();
             $desc = $descs[$i] ?? null;

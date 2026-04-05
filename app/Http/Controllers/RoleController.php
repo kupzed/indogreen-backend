@@ -81,12 +81,14 @@ class RoleController extends Controller
         /** @var \App\Models\User $targetUser */
         $targetUser = User::findOrFail($data['user_id']);
 
+        // Proteksi agar user tidak bisa menurunkan atau mengubah role-nya sendiri secara tidak sengaja
         if ($actor->id === $targetUser->id) {
             return response()->json([
                 'message' => 'Kamu tidak boleh mengubah role milik akun kamu sendiri.',
             ], 403);
         }
 
+        // Aturan Hierarki: Admin dilarang keras memodifikasi user setingkat atau memberikan role admin ke user lain
         if ($actor->hasRole('admin') && ! $actor->hasRole('super_admin')) {
             if ($targetUser->hasAnyRole(['admin', 'super_admin'])) {
                 return response()->json([
@@ -107,6 +109,7 @@ class RoleController extends Controller
             'guard_name' => $guard,
         ]);
 
+        // Mengambil snapshot role & permission saat ini untuk kepentingan audit log (perbandingan data lama)
         $previousSnapshot = [
             'roles' => $targetUser->getRoleNames()->toArray(),
             'permissions' => $targetUser->getAllPermissions()->pluck('name')->toArray(),
@@ -135,6 +138,7 @@ class RoleController extends Controller
             $targetUser->syncPermissions([]);
         }
 
+        // Mengambil snapshot setelah perubahan untuk mencatat perbedaan yang terjadi di audit log
         $currentSnapshot = [
             'roles' => $targetUser->getRoleNames()->toArray(),
             'permissions' => $targetUser->getAllPermissions()->pluck('name')->toArray(),

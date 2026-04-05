@@ -188,10 +188,11 @@ class ActivityLogService
             $logs = json_decode($content, true) ?: [];
         }
         
-        // Add new log
+        // Menambahkan log baru ke array yang sudah ada
         $logs[] = $logData;
         
-        // Check file size and rotate if needed
+        // Mekanisme Rotasi: Jika ukuran file saat ini melebihi ambang batas (10MB),
+        // file akan di-archive dan log baru dimulai di file JSON baru.
         if (strlen(json_encode($logs)) > $this->maxFileSize) {
             $this->rotateFile($userId, $filename);
             $logs = [$logData]; // Start new file with current log
@@ -215,7 +216,7 @@ class ActivityLogService
         
         $files = Storage::files($userDir);
         
-        // Sort files by name (newest first)
+        // Membaca file dari yang terbaru berdasarkan nama file (format YYYY-MM-DD.json)
         rsort($files);
         
         foreach ($files as $file) {
@@ -241,13 +242,14 @@ class ActivityLogService
     protected function rotateFile($userId, $filename)
     {
         $oldPath = "{$this->logPath}/user_{$userId}/{$filename}";
+        // Mengubah nama file lama dengan menyertakan timestamp agar unik sebelum membuat file baru
         $newPath = "{$this->logPath}/user_{$userId}/" . date('Y-m-d_H-i-s') . '.json';
         
         if (Storage::exists($oldPath)) {
             Storage::move($oldPath, $newPath);
         }
         
-        // Clean old files
+        // Memastikan jumlah file log tidak terus membengkak (Clean logic)
         $this->cleanOldFiles($userId);
     }
 
@@ -259,6 +261,7 @@ class ActivityLogService
         $userDir = "{$this->logPath}/user_{$userId}";
         $files = Storage::files($userDir);
         
+        // Jika jumlah file melebihi batas (100 file), hapus file yang paling lama dimodifikasi
         if (count($files) > $this->maxFilesPerUser) {
             // Sort files by modification time (oldest first)
             usort($files, function($a, $b) {
@@ -310,12 +313,14 @@ class ActivityLogService
                     case 'user_id':
                         if ($log['user_id'] != $value) return false;
                         break;
+                    // Konversi string tanggal ke timestamp untuk perbandingan rentang waktu
                     case 'date_from':
                         if (strtotime($log['timestamp']) < strtotime($value)) return false;
                         break;
                     case 'date_to':
                         if (strtotime($log['timestamp']) > strtotime($value)) return false;
                         break;
+                    // Pencarian string sederhana (case-insensitive) pada deskripsi atau nama model
                     case 'search':
                         $search = strtolower($value);
                         $description = strtolower($log['description'] ?? '');

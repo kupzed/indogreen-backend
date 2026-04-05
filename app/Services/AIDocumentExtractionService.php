@@ -29,6 +29,7 @@ class AIDocumentExtractionService
 
         $context = $this->buildProjectContext($projectId);
         $mimeType = $file->getClientMimeType();
+        // Menentukan apakah file adalah gambar untuk menggunakan Vision API atau sekadar teks
         $isImage  = in_array($mimeType, self::IMAGE_MIMES, true);
 
         $messages = $isImage
@@ -38,7 +39,7 @@ class AIDocumentExtractionService
         $payload = [
             'model'       => $this->model,
             'messages'    => $messages,
-            'temperature' => 0.1,
+            'temperature' => 0.1, // Suhu rendah untuk akurasi data yang lebih konsisten
             'max_tokens'  => 2048,
         ];
 
@@ -66,6 +67,7 @@ class AIDocumentExtractionService
             throw new \RuntimeException('AI returned an empty response. Please try again.');
         }
 
+        // Membersihkan blok kode markdown (```json ... ```) dari output AI agar bisa di-parse sebagai JSON murni
         $cleanedText = trim(preg_replace(
             ['/^```(?:json)?\s*/i', '/\s*```$/'],
             '',
@@ -86,6 +88,7 @@ class AIDocumentExtractionService
 
     private function buildVisionMessages(UploadedFile $file, string $mimeType, string $context): array
     {
+        // Mengonversi gambar ke base64 agar bisa dikirimkan ke model vision
         $base64 = base64_encode(file_get_contents($file->getRealPath()));
         return [
             [
@@ -99,7 +102,7 @@ class AIDocumentExtractionService
                         'type'      => 'image_url',
                         'image_url' => [
                             'url'    => "data:{$mimeType};base64,{$base64}",
-                            'detail' => 'high',
+                            'detail' => 'high', // Menggunakan detail tinggi untuk pembacaan teks yang lebih akurat
                         ],
                     ],
                     [
@@ -115,8 +118,10 @@ class AIDocumentExtractionService
     private function buildTextMessages(UploadedFile $file, string $context): array
     {
         $rawContent = @file_get_contents($file->getRealPath());
+        // Membersihkan karakter non-printable/aneh dari data teks mentah
         $textContent = preg_replace('/[^\x20-\x7E\xA0-\xFF\n\r\t]/u', ' ', $rawContent ?? '');
-        $textContent = mb_substr(trim($textContent), 0, 8000); // keep within token budget
+        // Membatasi isi teks agar tidak melebihi batasan token model (keep within token budget)
+        $textContent = mb_substr(trim($textContent), 0, 8000);
 
         $originalName = $file->getClientOriginalName();
 
@@ -137,6 +142,7 @@ class AIDocumentExtractionService
 
     private function buildProjectContext(?int $projectId): string
     {
+        // Menyediakan petunjuk (context hints) ke AI guna meningkatkan akurasi identifikasi mitra/customer
         if (!$projectId) return 'Tidak ada konteks proyek spesifik.';
 
         $project = \App\Models\Project::with('mitra')->find($projectId);
@@ -148,6 +154,7 @@ class AIDocumentExtractionService
 
     private function systemPrompt(): string
     {
+        // Instruksi ketat ke model AI dalam Bahasa Indonesia agar output stabil berbentuk JSON
         return <<<'PROMPT'
 Anda adalah alat ekstraksi data otomatis yang sangat presisi. Tugas SATU-SATUNYA Anda adalah menganalisis dokumen dan mengembalikan data dalam format JSON terstruktur.
 
@@ -183,9 +190,10 @@ PROMPT;
 
         $allowedJenis = ['Internal', 'Customer', 'Vendor'];
 
+        // Mengonversi nilai nominal dari format teks/ribuan ke angka float murni
         $rawValue = $data['value'] ?? 0;
         if (is_string($rawValue)) {
-            $cleanValue = preg_replace('/[^0-9]/', '', $rawValue);
+            $cleanValue = preg_replace('/[^0-9.]/', '', str_replace(',', '', $rawValue));
             $finalValue = (float) $cleanValue; 
         } else {
             $finalValue = (float) $rawValue;
@@ -199,6 +207,7 @@ PROMPT;
             'activity_date' => $this->parseDate((string) ($data['activity_date'] ?? '')),
             'from'          => substr((string) ($data['from'] ?? ''), 0, 255),
             'to'            => substr((string) ($data['to'] ?? ''), 0, 255),
+            // Memastikan kategori dan jenis sesuai dengan daftar ENUM yang diizinkan sistem
             'kategori'      => in_array($data['kategori'] ?? '', $allowedKategori, true)
                                     ? $data['kategori']
                                     : 'Other',
