@@ -38,6 +38,16 @@ class CertificateService
         return $certificate->load(['project', 'barangCertificate', 'attachments']);
     }
 
+    public function getBarangByProjectId($projectId)
+    {
+        $project = Project::find($projectId);
+        if (!$project) return [];
+
+        return BarangCertificate::where('mitra_id', $project->mitra_id)
+            ->select('id', 'name', 'no_seri')
+            ->get();
+    }
+
     public function getFormDependencies(Request $request): array
     {
         $projects = Project::select('id', 'name')->get();
@@ -46,12 +56,7 @@ class CertificateService
 
         $barangOptions = [];
         if ($request->filled('project_id')) {
-            $project = Project::find($request->project_id);
-            if ($project) {
-                $barangOptions = BarangCertificate::where('mitra_id', $project->mitra_id)
-                    ->select('id', 'name', 'no_seri')
-                    ->get();
-            }
+            $barangOptions = $this->getBarangByProjectId($request->project_id);
         }
 
         return [
