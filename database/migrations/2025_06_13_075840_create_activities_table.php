@@ -14,10 +14,13 @@ return new class extends Migration
         Schema::create('activities', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->text('short_desc')->nullable();
-            $table->text('description');
-            $table->decimal('value', 15, 2)->default(0);
             $table->foreignId('project_id')->constrained()->onDelete('cascade');
+            $table->enum('jenis', [
+                'Internal',
+                'Customer',
+                'Vendor',
+            ])->default('Internal');
+            $table->foreignId('mitra_id')->nullable()->constrained('partners')->onDelete('set null');
             $table->enum('kategori', [
                 'Expense Report',
                 'Invoice',
@@ -37,15 +40,12 @@ return new class extends Migration
                 'Legalitas',
                 'Other',
             ])->default('Expense Report');
-            $table->date('activity_date');
-            $table->enum('jenis', [
-                'Internal',
-                'Customer',
-                'Vendor',
-            ])->default('Internal');
-            $table->foreignId('mitra_id')->nullable()->constrained('partners')->onDelete('set null');
             $table->text('from')->nullable();
             $table->text('to')->nullable();
+            $table->text('short_desc')->nullable();
+            $table->text('description');
+            $table->decimal('value', 15, 2)->default(0);
+            $table->date('activity_date');
             $table->timestamps();
         });
     }
