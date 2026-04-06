@@ -143,13 +143,32 @@ class AIDocumentExtractionService
     private function buildProjectContext(?int $projectId): string
     {
         // Menyediakan petunjuk (context hints) ke AI guna meningkatkan akurasi identifikasi mitra/customer
-        if (!$projectId) return 'Tidak ada konteks proyek spesifik.';
+        $lines = [];
 
-        $project = \App\Models\Project::with('mitra')->find($projectId);
-        if (!$project) return 'Data proyek tidak ditemukan.';
+        if ($projectId) {
+            $project = \App\Models\Project::with('mitra')->find($projectId);
+            if ($project) {
+                $customer = $project->mitra ? $project->mitra->nama : 'N/A';
+                $lines[] = "Nama Proyek: {$project->name}";
+                $lines[] = "Customer Proyek: {$customer}";
+            } else {
+                $lines[] = 'Data proyek tidak ditemukan.';
+            }
+        } else {
+            $lines[] = 'Tidak ada konteks proyek spesifik.';
+        }
 
-        $customer = $project->mitra ? $project->mitra->nama : 'N/A';
-        return "Nama Proyek: {$project->name}\nCustomer Proyek: {$customer}";
+        // Menyertakan daftar vendor yang tersedia agar AI bisa mencocokkan nama vendor → ID
+        $vendors = \App\Models\Mitra::where('is_vendor', true)->get(['id', 'nama']);
+        if ($vendors->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = 'DAFTAR VENDOR TERSEDIA (gunakan untuk mencocokkan mitra_id jika jenis=Vendor):';
+            foreach ($vendors as $v) {
+                $lines[] = "- ID: {$v->id}, Nama: {$v->nama}";
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     private function systemPrompt(): string
@@ -163,19 +182,36 @@ ATURAN PENTING:
 2. JSON harus menggunakan KUNCI dan BATASAN NILAI berikut ini secara TEPAT:
 
 {
-    "name": "(string) Judul dokumen yang logis dan singkat. Contoh: 'Invoice Jasa Modifikasi #ITM/INV/1/26/002'.",
+    "name": "(string) Judul dokumen yang logis dan singkat. Contoh: 'Kasbon Kekurangan Alat Project Cisem-2 #KB/I-2026/Log/045'.",
+    "jenis": "(string) WAJIB persis salah satu dari: 'Internal', 'Customer', 'Vendor'. Gunakan 'Internal' untuk dokumen internal perusahaan (kasbon, memo, surat internal). Gunakan 'Customer' untuk dokumen yang melibatkan klien/pelanggan. Gunakan 'Vendor' untuk dokumen yang melibatkan supplier/vendor.",
+    "mitra_id": "(number|null) ID vendor dari DAFTAR VENDOR yang diberikan di PROJECT CONTEXT. HANYA diisi jika jenis='Vendor'. Cocokkan nama vendor/supplier di dokumen dengan nama vendor di daftar. Jika tidak cocok atau jenis bukan 'Vendor', isi null."
+    "kategori": "(string) WAJIB persis salah satu dari: 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation', 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other'. (Pilih 'Invoice' jika ini adalah tagihan).",
+    "from": "(string) Pihak pengirim/pembuat dokumen. Lihat ATURAN FROM & TO di bawah.",
+    "to": "(string) Pihak penerima dokumen. Lihat ATURAN FROM & TO di bawah.",
     "short_desc": "(string) Ringkasan satu kalimat mengenai isi dokumen. MAKSIMAL 80 karakter.",
     "description": "(string) Ringkasan detail yang mencakup fakta penting, item pekerjaan/barang, dan rincian nominal (seperti DPP, PPN).",
     "value": "(number) Nilai akhir/Total Tagihan/Grand Total. HANYA ANGKA MURNI. Hilangkan simbol 'Rp', spasi, dan semua tanda pemisah ribuan (titik/koma). Contoh: Jika di dokumen tertulis 'Rp 49,950,000', kembalikan angka 49950000. Jika tidak ditemukan, isi 0.",
     "activity_date": "(string) Tanggal utama dokumen diformat ketat sebagai YYYY-MM-DD. (Contoh: '28/Jan/2026' dikonversi menjadi '2026-01-28').",
-    "from": "(string) Pihak pengirim, penerbit, atau pembuat dokumen (Contoh: PT INDOGREEN).",
-    "to": "(string) Pihak penerima atau pelanggan (Contoh: KSO PT TIMAS SUPLINDO).",
-    "kategori": "(string) WAJIB persis salah satu dari: 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation', 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other'. (Pilih 'Invoice' jika ini adalah tagihan).",
-    "jenis": "(string) WAJIB persis salah satu dari: 'Internal', 'Customer', 'Vendor'. Gunakan 'Customer' untuk dokumen tagihan ke klien/pelanggan, 'Vendor' untuk tagihan dari supplier."
 }
 
-3. JANGAN tambahkan kunci lain di luar skema di atas.
-4. Gunakan string kosong "" jika teks tidak ditemukan.
+3. ATURAN FROM & TO (WAJIB DIPATUHI SECARA KETAT):
+    a. Jika jenis = 'Internal':
+        - Opsi 1: from = "NAMA PEMOHON/PEMBUAT" (ambil dari dokumen, misal nama yang tertera di field 'Nama Pemohon', 'Dilaporkan Oleh', atau penandatangan), to = "INDOGREEN"
+        - Opsi 2: from = "INDOGREEN", to = "NAMA ORANG" (penerima yang tertera di dokumen)
+        - Gunakan NAMA ORANG ASLI dari dokumen, bukan label generik. Contoh: from = "Ujang Winarya", to = "INDOGREEN"
+    b. Jika jenis = 'Customer':
+        - Opsi 1: from = "CUSTOMER", to = "INDOGREEN"
+        - Opsi 2: from = "INDOGREEN", to = "CUSTOMER"
+        - WAJIB gunakan kata "CUSTOMER" saja, JANGAN gunakan nama perusahaan customer.
+    c. Jika jenis = 'Vendor':
+        - Opsi 1: from = "VENDOR", to = "INDOGREEN"
+        - Opsi 2: from = "INDOGREEN", to = "VENDOR"
+        - WAJIB gunakan kata "VENDOR" saja, JANGAN gunakan nama perusahaan vendor.
+    d. Tentukan arah (siapa from, siapa to) berdasarkan konteks dokumen: siapa yang MENGIRIM/MEMBUAT dan siapa yang MENERIMA.
+    e. JANGAN menulis alamat, jabatan, atau informasi tambahan di field from/to. Hanya nama singkat.
+
+4. JANGAN tambahkan kunci lain di luar skema di atas.
+5. Gunakan string kosong "" jika teks tidak ditemukan. Gunakan null untuk mitra_id jika tidak berlaku.
 PROMPT;
     }
 
@@ -199,6 +235,21 @@ PROMPT;
             $finalValue = (float) $rawValue;
         }
 
+        $jenis = in_array($data['jenis'] ?? '', $allowedJenis, true)
+            ? $data['jenis']
+            : 'Internal';
+
+        // Validasi mitra_id: hanya berlaku jika jenis = 'Vendor' dan ID vendor ada di database
+        $mitraId = null;
+        if ($jenis === 'Vendor' && !empty($data['mitra_id'])) {
+            $vendorExists = \App\Models\Mitra::where('id', (int) $data['mitra_id'])
+                ->where('is_vendor', true)
+                ->exists();
+            if ($vendorExists) {
+                $mitraId = (int) $data['mitra_id'];
+            }
+        }
+
         return [
             'name'          => substr((string) ($data['name'] ?? ''), 0, 255),
             'short_desc'    => substr((string) ($data['short_desc'] ?? ''), 0, 80),
@@ -211,9 +262,9 @@ PROMPT;
             'kategori'      => in_array($data['kategori'] ?? '', $allowedKategori, true)
                                     ? $data['kategori']
                                     : 'Other',
-            'jenis'         => in_array($data['jenis'] ?? '', $allowedJenis, true)
-                                    ? $data['jenis']
-                                    : 'Internal',
+            'jenis'         => $jenis,
+            // Mitra ID vendor yang sudah divalidasi terhadap database
+            'mitra_id'      => $mitraId,
         ];
     }
 
