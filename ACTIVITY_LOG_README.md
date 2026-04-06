@@ -6,11 +6,12 @@ Sistem pencatatan aktivitas berbasis file untuk backend Laravel. Sistem ini meny
 
 -   ✅ **File-based storage** - Aktivitas disimpan dalam file JSON per user
 -   ✅ **Automatic logging** - Otomatis mencatat CRUD operations
+-   ✅ **Role-Based Access Control** - Admin/Super Admin melihat log global, user biasa hanya melihat log sendiri
 -   ✅ **File rotation** - Otomatis memutar file saat ukuran melebihi batas
 -   ✅ **Cleanup system** - Menghapus file lama secara otomatis
--   ✅ **Filtering & search** - Pencarian dan filter aktivitas
+-   ✅ **Filtering & search** - Pencarian dan filter aktivitas (global/spesifik)
 -   ✅ **Export functionality** - Export log ke JSON
--   ✅ **Statistics** - Statistik aktivitas
+-   ✅ **Statistics** - Statistik aktivitas real-time
 -   ✅ **Middleware support** - Middleware untuk mencatat aktivitas otomatis
 
 ## Struktur File
@@ -38,6 +39,12 @@ protected $logPath = 'activity-logs';           // Path penyimpanan
 protected $maxFileSize = 10485760;              // 10MB per file
 protected $maxFilesPerUser = 100;               // Max 100 file per user
 ```
+
+### Role-Based Access Control (RBAC)
+
+Sistem ini sekarang mendukung pembatasan akses berdasarkan role:
+- **Super Admin & Admin**: Dapat melihat log dari semua user secara global.
+- **User Lainnya**: Hanya dapat melihat riwayat aktivitas mereka sendiri.
 
 ## Penggunaan
 
@@ -77,6 +84,12 @@ $service->log(
     null,                        // old_values
     $project->toArray()          // new_values
 );
+
+// Method untuk mengambil log dengan filter role
+$service->getLogs($filters, $userId = null); // $userId null berarti global (Admin only)
+$service->getRecentLogs($limit = 10, $userId = null);
+$service->getStats($userId = null);
+$service->getFilterOptions($userId = null);
 ```
 
 ### 3. Helper Functions
@@ -97,46 +110,47 @@ ActivityHelper::logExport(Project::class, 'Exported projects to Excel');
 ## API Endpoints
 
 ### Get Activity Logs
+> [!NOTE]
+> Response tergantung pada role user. Admin akan menerima log global, sedangkan user biasa hanya log pribadi.
 
 ```http
 GET /api/activity-logs
 GET /api/activity-logs?action=created&model_type=App\Models\Project
 GET /api/activity-logs?date_from=2025-07-01&date_to=2025-07-31
 GET /api/activity-logs?search=project
+GET /api/activity-logs?user_id=1  (Admin only)
 ```
 
 ### Get Recent Activities
-
 ```http
 GET /api/activity-logs/recent
 ```
 
 ### Get Statistics
-
 ```http
 GET /api/activity-logs/stats
 ```
 
 ### Get Filter Options
-
 ```http
 GET /api/activity-logs/filter-options
 ```
 
 ### Get Model Logs
+> [!TIP]
+> Admin dapat melihat seluruh riwayat perubahan pada model ini oleh siapapun. User biasa hanya melihat perubahannya sendiri.
 
 ```http
-GET /api/activity-logs/App\Models\Project/123
+GET /api/activity-logs/{modelType}/{modelId}
+Contoh: GET /api/activity-logs/App.Models.Project/123
 ```
 
 ### Export Logs
-
 ```http
 GET /api/activity-logs/export?action=created&date_from=2025-07-01
 ```
 
 ### Delete User Logs
-
 ```http
 DELETE /api/activity-logs
 ```
@@ -300,10 +314,11 @@ df -h
 
 ## Security Considerations
 
-1. **File Access** - Pastikan file log tidak bisa diakses publik
-2. **Data Privacy** - Hapus data sensitif sebelum logging
-3. **Audit Trail** - Jangan hapus log yang diperlukan untuk audit
-4. **Encryption** - Pertimbangkan enkripsi untuk data sensitif
+1. **Access Control** - Pastikan endpoint log dilindungi dengan role yang tepat
+2. **File Permissions** - Pastikan file log tidak bisa diakses publik secara langsung
+3. **Data Privacy** - Hapus data sensitif (seperti password) sebelum logging
+4. **Audit Integrity** - Jangan izinkan penghapusan log global kecuali oleh Super Admin
+5. **Role Leakage** - Pastikan user biasa tidak bisa melihat log user lain melalui manipulasi parameter `user_id`
 
 ## Migration dari Database
 

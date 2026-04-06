@@ -46,36 +46,63 @@ class ActivityLogService
     }
 
     /**
-     * Get activity logs for a user
+     * Get activity logs (for a specific user or all users)
      */
-    public function getUserLogs($userId, $filters = [])
+    public function getLogs($filters = [], $userId = null)
     {
-        $logs = $this->readUserLogs($userId);
+        $allLogs = [];
+        
+        if ($userId) {
+            $allLogs = $this->readUserLogs($userId);
+        } else {
+            $users = $this->getAllUsers();
+            foreach ($users as $id) {
+                $userLogs = $this->readUserLogs($id);
+                $allLogs = array_merge($allLogs, $userLogs);
+            }
+            
+            // Sort by timestamp descending for global view
+            usort($allLogs, function($a, $b) {
+                return strtotime($b['timestamp'] ?? 0) - strtotime($a['timestamp'] ?? 0);
+            });
+        }
         
         // Apply filters
         if (!empty($filters)) {
-            $logs = $this->filterLogs($logs, $filters);
+            $allLogs = $this->filterLogs($allLogs, $filters);
         }
 
-        return $logs;
+        return $allLogs;
+    }
+
+    /**
+     * Get activity logs for a specific user (legacy wrapper)
+     */
+    public function getUserLogs($userId, $filters = [])
+    {
+        return $this->getLogs($filters, $userId);
     }
 
     /**
      * Get recent activity logs
      */
-    public function getRecentLogs($limit = 10)
+    public function getRecentLogs($limit = 10, $userId = null)
     {
         $allLogs = [];
-        $users = $this->getAllUsers();
         
-        foreach ($users as $userId) {
-            $userLogs = $this->readUserLogs($userId);
-            $allLogs = array_merge($allLogs, $userLogs);
+        if ($userId) {
+            $allLogs = $this->readUserLogs($userId);
+        } else {
+            $users = $this->getAllUsers();
+            foreach ($users as $id) {
+                $userLogs = $this->readUserLogs($id);
+                $allLogs = array_merge($allLogs, $userLogs);
+            }
         }
 
         // Sort by timestamp descending
         usort($allLogs, function($a, $b) {
-            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+            return strtotime($b['timestamp'] ?? 0) - strtotime($a['timestamp'] ?? 0);
         });
 
         return array_slice($allLogs, 0, $limit);
@@ -84,7 +111,7 @@ class ActivityLogService
     /**
      * Get activity statistics
      */
-    public function getStats()
+    public function getStats($userId = null)
     {
         $stats = [
             'total_activities' => 0,
@@ -95,18 +122,18 @@ class ActivityLogService
             'models_count' => [],
         ];
 
-        $users = $this->getAllUsers();
+        $users = $userId ? [$userId] : $this->getAllUsers();
         $today = now()->startOfDay();
         $weekStart = now()->startOfWeek();
         $monthStart = now()->startOfMonth();
 
-        foreach ($users as $userId) {
-            $userLogs = $this->readUserLogs($userId);
+        foreach ($users as $id) {
+            $userLogs = $this->readUserLogs($id);
             
             foreach ($userLogs as $log) {
                 $stats['total_activities']++;
                 
-                $logTime = Carbon::parse($log['timestamp']);
+                $logTime = Carbon::parse($log['timestamp'] ?? now());
                 
                 if ($logTime->gte($today)) {
                     $stats['today_activities']++;
@@ -121,11 +148,11 @@ class ActivityLogService
                 }
 
                 // Count actions
-                $action = $log['action'];
+                $action = $log['action'] ?? 'unknown';
                 $stats['actions_count'][$action] = ($stats['actions_count'][$action] ?? 0) + 1;
 
                 // Count models
-                $modelType = $log['model_type'];
+                $modelType = $log['model_type'] ?? null;
                 if ($modelType) {
                     $stats['models_count'][$modelType] = ($stats['models_count'][$modelType] ?? 0) + 1;
                 }
@@ -138,7 +165,7 @@ class ActivityLogService
     /**
      * Get filter options
      */
-    public function getFilterOptions()
+    public function getFilterOptions($userId = null)
     {
         $options = [
             'actions' => [],
@@ -146,21 +173,21 @@ class ActivityLogService
             'users' => [],
         ];
 
-        $users = $this->getAllUsers();
+        $users = $userId ? [$userId] : $this->getAllUsers();
         
-        foreach ($users as $userId) {
-            $userLogs = $this->readUserLogs($userId);
+        foreach ($users as $id) {
+            $userLogs = $this->readUserLogs($id);
             
             foreach ($userLogs as $log) {
-                if (!in_array($log['action'], $options['actions'])) {
+                if (!empty($log['action']) && !in_array($log['action'], $options['actions'])) {
                     $options['actions'][] = $log['action'];
                 }
                 
-                if ($log['model_type'] && !in_array($log['model_type'], $options['model_types'])) {
+                if (!empty($log['model_type']) && !in_array($log['model_type'], $options['model_types'])) {
                     $options['model_types'][] = $log['model_type'];
                 }
                 
-                $userKey = $log['user_id'] . '|' . $log['user_name'];
+                $userKey = ($log['user_id'] ?? 'unknown') . '|' . ($log['user_name'] ?? 'Unknown');
                 if (!in_array($userKey, $options['users'])) {
                     $options['users'][] = $userKey;
                 }

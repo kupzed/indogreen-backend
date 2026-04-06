@@ -21,6 +21,10 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+        
         $filters = [];
         
         // Build filters
@@ -51,8 +55,10 @@ class ActivityLogController extends Controller
         $perPage = $request->get('per_page', 15);
         $page = $request->get('page', 1);
         
-        // Get all logs and apply pagination manually
-        $allLogs = $this->service->getUserLogs(Auth::id(), $filters);
+        // Fetch logs (null for all users if admin, else only current user)
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $allLogs = $this->service->getLogs($filters, $logTargetId);
+        
         $total = count($allLogs);
         $offset = ($page - 1) * $perPage;
         $logs = array_slice($allLogs, $offset, $perPage);
@@ -74,6 +80,10 @@ class ActivityLogController extends Controller
      */
     public function getModelLogs(Request $request, $modelType, $modelId): JsonResponse
     {
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+
         $filters = [
             'model_type' => $modelType,
             'model_id' => $modelId
@@ -82,7 +92,11 @@ class ActivityLogController extends Controller
         $perPage = $request->get('per_page', 15);
         $page = $request->get('page', 1);
         
-        $allLogs = $this->service->getUserLogs(Auth::id(), $filters);
+        // For admins, show ALL logs for this model from ANY user
+        // For regular users, show only their actions on this model
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $allLogs = $this->service->getLogs($filters, $logTargetId);
+        
         $total = count($allLogs);
         $offset = ($page - 1) * $perPage;
         $logs = array_slice($allLogs, $offset, $perPage);
@@ -104,7 +118,12 @@ class ActivityLogController extends Controller
      */
     public function getRecent(): JsonResponse
     {
-        $logs = $this->service->getRecentLogs(10);
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $logs = $this->service->getRecentLogs(10, $logTargetId);
 
         return response()->json([
             'success' => true,
@@ -117,7 +136,12 @@ class ActivityLogController extends Controller
      */
     public function getStats(): JsonResponse
     {
-        $stats = $this->service->getStats();
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $stats = $this->service->getStats($logTargetId);
 
         return response()->json([
             'success' => true,
@@ -130,7 +154,12 @@ class ActivityLogController extends Controller
      */
     public function getFilterOptions(): JsonResponse
     {
-        $options = $this->service->getFilterOptions();
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $options = $this->service->getFilterOptions($logTargetId);
 
         return response()->json([
             'success' => true,
@@ -143,6 +172,10 @@ class ActivityLogController extends Controller
      */
     public function export(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $actor */
+        $actor = Auth::user();
+        $isAdmin = $actor->hasAnyRole(['super_admin', 'admin']);
+
         $filters = [];
         
         if ($request->has('action') && $request->action) {
@@ -161,7 +194,8 @@ class ActivityLogController extends Controller
             $filters['date_to'] = $request->date_to;
         }
 
-        $jsonData = $this->service->exportUserLogs(Auth::id(), $filters);
+        $logTargetId = $isAdmin ? null : $actor->id;
+        $jsonData = $this->service->exportUserLogs($logTargetId, $filters);
 
         return response()->json([
             'success' => true,
