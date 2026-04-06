@@ -182,19 +182,38 @@ ATURAN PENTING:
 2. JSON harus menggunakan KUNCI dan BATASAN NILAI berikut ini secara TEPAT:
 
 {
-    "name": "(string) Judul dokumen yang logis dan singkat. Contoh: 'Kasbon Kekurangan Alat Project Cisem-2 #KB/I-2026/Log/045'.",
-    "jenis": "(string) WAJIB persis salah satu dari: 'Internal', 'Customer', 'Vendor'. Gunakan 'Internal' untuk dokumen internal perusahaan (kasbon, memo, surat internal). Gunakan 'Customer' untuk dokumen yang melibatkan klien/pelanggan. Gunakan 'Vendor' untuk dokumen yang melibatkan supplier/vendor.",
-    "mitra_id": "(number|null) ID vendor dari DAFTAR VENDOR yang diberikan di PROJECT CONTEXT. HANYA diisi jika jenis='Vendor'. Cocokkan nama vendor/supplier di dokumen dengan nama vendor di daftar. Jika tidak cocok atau jenis bukan 'Vendor', isi null."
+    "name": "(string) Judul dokumen yang logis dan singkat. Contoh: 'Proforma Invoice PT Bangkit Indo Energi #2025/VI/BIE-PI/0354'.",
+    "jenis": "(string) WAJIB persis salah satu dari: 'Internal', 'Customer', 'Vendor'. Lihat PANDUAN PENENTUAN JENIS di bawah.",
+    "mitra_id": "(number|null) ID vendor dari DAFTAR VENDOR yang diberikan di PROJECT CONTEXT. HANYA diisi jika jenis='Vendor'. Cocokkan nama vendor/supplier di dokumen dengan nama vendor di daftar. Jika tidak cocok atau jenis bukan 'Vendor', isi null.",
     "kategori": "(string) WAJIB persis salah satu dari: 'Expense Report', 'Invoice', 'Invoice & FP', 'Purchase Order', 'Payment', 'Quotation', 'Faktur Pajak', 'Kasbon', 'Laporan Teknis', 'Surat Masuk', 'Surat Keluar', 'Kontrak', 'Berita Acara', 'Receive Item', 'Delivery Order', 'Legalitas', 'Other'. (Pilih 'Invoice' jika ini adalah tagihan).",
     "from": "(string) Pihak pengirim/pembuat dokumen. Lihat ATURAN FROM & TO di bawah.",
     "to": "(string) Pihak penerima dokumen. Lihat ATURAN FROM & TO di bawah.",
     "short_desc": "(string) Ringkasan satu kalimat mengenai isi dokumen. MAKSIMAL 80 karakter.",
     "description": "(string) Ringkasan detail yang mencakup fakta penting, item pekerjaan/barang, dan rincian nominal (seperti DPP, PPN).",
     "value": "(number) Nilai akhir/Total Tagihan/Grand Total. HANYA ANGKA MURNI. Hilangkan simbol 'Rp', spasi, dan semua tanda pemisah ribuan (titik/koma). Contoh: Jika di dokumen tertulis 'Rp 49,950,000', kembalikan angka 49950000. Jika tidak ditemukan, isi 0.",
-    "activity_date": "(string) Tanggal utama dokumen diformat ketat sebagai YYYY-MM-DD. (Contoh: '28/Jan/2026' dikonversi menjadi '2026-01-28').",
+    "activity_date": "(string) Tanggal utama dokumen diformat ketat sebagai YYYY-MM-DD. (Contoh: '28/Jan/2026' dikonversi menjadi '2026-01-28')."
 }
 
-3. ATURAN FROM & TO (WAJIB DIPATUHI SECARA KETAT):
+3. PANDUAN PENENTUAN JENIS (WAJIB DIIKUTI — BACA URUT):
+    Perusahaan utama/pemilik sistem adalah "INDOGREEN" (PT Indogreen Technology and Management / PT ITM).
+    Tentukan jenis dengan logika berikut:
+
+    a. Jenis = 'Vendor' — jika dokumen DARI pihak luar (supplier/vendor/distributor) KEPADA Indogreen, ATAU dari Indogreen KEPADA supplier/vendor.
+        Contoh: Invoice/Proforma Invoice/Quotation/PO/DO dari perusahaan lain yang ditujukan ke Indogreen.
+        Contoh konkret: "Proforma Invoice dari PT Bangkit Indo Energi kepada PT Indogreen" → jenis = 'Vendor'.
+        Tanda-tanda: kop surat bukan Indogreen, "Kepada Yth: PT Indogreen", tagihan dari pihak ketiga.
+
+    b. Jenis = 'Customer' — jika dokumen DARI Indogreen KEPADA klien/pelanggan, ATAU dari klien/pelanggan KEPADA Indogreen berkaitan dengan proyek pelanggan.
+        Contoh: Invoice/Quotation/Berita Acara yang diterbitkan Indogreen untuk pelanggan.
+        Tanda-tanda: kop surat Indogreen, "Kepada: [nama pelanggan]", penagihan ke klien.
+
+    c. Jenis = 'Internal' — jika dokumen beredar di DALAM Indogreen saja, tidak melibatkan pihak luar.
+        Contoh: Kasbon, memo internal, surat perjalanan dinas, laporan internal.
+        Tanda-tanda: kop surat Indogreen, ditujukan ke karyawan/divisi internal, Nama Pemohon = karyawan Indogreen.
+
+    PENTING: Jika dokumen memiliki kop surat BUKAN Indogreen dan ditujukan ke Indogreen → hampir pasti 'Vendor'.
+
+4. ATURAN FROM & TO (WAJIB DIPATUHI SECARA KETAT):
     a. Jika jenis = 'Internal':
         - Opsi 1: from = "NAMA PEMOHON/PEMBUAT" (ambil dari dokumen, misal nama yang tertera di field 'Nama Pemohon', 'Dilaporkan Oleh', atau penandatangan), to = "INDOGREEN"
         - Opsi 2: from = "INDOGREEN", to = "NAMA ORANG" (penerima yang tertera di dokumen)
@@ -210,8 +229,8 @@ ATURAN PENTING:
     d. Tentukan arah (siapa from, siapa to) berdasarkan konteks dokumen: siapa yang MENGIRIM/MEMBUAT dan siapa yang MENERIMA.
     e. JANGAN menulis alamat, jabatan, atau informasi tambahan di field from/to. Hanya nama singkat.
 
-4. JANGAN tambahkan kunci lain di luar skema di atas.
-5. Gunakan string kosong "" jika teks tidak ditemukan. Gunakan null untuk mitra_id jika tidak berlaku.
+5. JANGAN tambahkan kunci lain di luar skema di atas.
+6. Gunakan string kosong "" jika teks tidak ditemukan. Gunakan null untuk mitra_id jika tidak berlaku.
 PROMPT;
     }
 
