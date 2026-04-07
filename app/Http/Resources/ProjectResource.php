@@ -31,7 +31,12 @@ class ProjectResource extends JsonResource
             'finish_date' => $this->finish_date?->format('Y-m-d'),
             'is_cert_projects' => $this->is_cert_projects,
             'cert_projects_label' => $this->is_cert_projects ? 'Certificate Project' : 'Regular Project',
-            'activities_count' => $this->whenCounted('activities'),
+            'activities_count' => $this->when($request->user()?->can('activity-view'), function () {
+                return $this->activities_count ?? $this->activities()->count();
+            }),
+            'activities' => $this->when($request->user()?->can('activity-view') && $this->whenLoaded('activities'), function () {
+                return ActivityResource::collection($this->activities);
+            }),
             'certificates_count' => $this->whenCounted('certificates'),
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),

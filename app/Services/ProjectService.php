@@ -25,14 +25,24 @@ class ProjectService
 
     public function getPaginatedProjects(array $filters, int $perPage)
     {
-        return Project::with('mitra')
+        return Project::with([
+            'mitra',
+            'activities' => function ($q) {
+                $q->with('mitra')->orderBy('activity_date', 'desc');
+            }
+        ])
             ->filter($filters)
             ->paginate($perPage);
     }
 
     public function getProjectDetail(Project $project): Project
     {
-        return $project->load('mitra');
+        return $project->load([
+            'mitra',
+            'activities' => function ($q) {
+                $q->with('mitra')->orderBy('activity_date', 'desc');
+            }
+        ]);
     }
 
     public function getFormDependencies(): array
